@@ -1,7 +1,7 @@
 {
   "name": "Atelier Électricité",
   "short_name": "Électricité",
-  "description": "QCM mobile pour réviser les calculs et les équations d’électricité.",
+  "description": "QCM mobile pour réviser les calculs et les équations d’électricité, dont la loi de Pouillet.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#071321",
