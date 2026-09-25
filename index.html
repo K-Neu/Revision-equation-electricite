@@ -57,6 +57,10 @@
     .help-off .formula,.help-off .formula-bar,.help-off .calculation{display:none}.help-off .feedback strong{margin-bottom:0}
     .summary{display:none;text-align:center}.summary.show{display:block}.summary .gauge{width:112px;height:112px;margin:8px auto 20px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--cyan) var(--score-angle),#17344b 0);position:relative}.summary .gauge:after{content:"";position:absolute;inset:9px;border-radius:50%;background:#0d2235}.summary .gauge strong{position:relative;z-index:1;font-size:1.55rem}.summary h2{font-size:1.55rem;margin:0 0 8px}.summary p{color:var(--muted);line-height:1.5;margin:0 0 20px}.summary button{width:100%;min-height:54px;border:0;border-radius:14px;background:var(--cyan);color:#06202b;font-weight:900;cursor:pointer}
     .install{display:none;border:1px solid #31516a;background:#0b2032;color:var(--muted);padding:8px 11px;border-radius:10px;font-size:.76rem;cursor:pointer}.install.show{display:block}
+    .scoring-note{margin:-6px 0 0;color:var(--muted);font-size:.875rem;line-height:1.45}.scoring-note[data-assisted="true"]{color:var(--yellow)}
+    .summary .breakdown{padding:14px;background:#071927;border:1px solid var(--line);border-radius:12px;white-space:pre-line;text-align:left;font-size:.95rem;color:var(--text)}
+    .result-actions{display:grid;gap:10px;margin-bottom:16px}.summary .export-btn,.summary .whatsapp{display:flex;align-items:center;justify-content:center;min-height:50px;padding:12px;border:1px solid #31516a;border-radius:12px;background:#0b2032;color:var(--text);font-size:1rem;font-weight:750;text-decoration:none}.summary .whatsapp{border-color:var(--green);color:var(--green)}
+    .summary .gauge{width:132px;height:132px}.summary .gauge strong{font-size:1.4rem}
     .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
     @media (min-width:700px){.app{padding-top:32px}.tabs{grid-template-columns:repeat(4,1fr)}.formula-mode{grid-column:auto}.card{padding:28px}.question{margin-top:30px}.answer{min-height:60px}}
     @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
@@ -67,7 +71,7 @@
     <header>
       <div class="brand"><div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13.2 1 3.8 13.4h6.7L9.1 23l9.7-13.2h-6.6z"/></svg></div><div><h1>Atelier Électricité</h1><small>Entraînement QCM</small></div></div>
       <button class="install" id="installBtn">Installer</button>
-      <div class="score" id="scoreBox"><strong id="score">0</strong><span>bonnes réponses</span></div>
+      <div class="score" id="scoreBox"><strong id="score">0 / 10</strong><span>points</span></div>
     </header>
 
     <nav class="tabs" aria-label="Choix du thème">
@@ -82,6 +86,7 @@
     </nav>
 
     <label class="aids-toggle" for="helpToggle"><span>Afficher les aides</span><span class="switch"><input id="helpToggle" type="checkbox" checked><i aria-hidden="true"></i></span></label>
+    <p class="scoring-note" id="scoringNote" aria-live="polite"></p>
 
     <div class="progress-row"><span id="counter">Question 1 / 10</span><div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="progressFill"></i></div></div>
 
@@ -109,6 +114,11 @@
         <div class="gauge" id="gauge"><strong id="finalScore">0/10</strong></div>
         <h2 id="summaryTitle">Série terminée</h2>
         <p id="summaryText"></p>
+        <p class="breakdown" id="scoreBreakdown"></p>
+        <div class="result-actions">
+          <button class="export-btn" id="exportBtn">Télécharger le résultat (.txt)</button>
+          <a class="whatsapp" id="whatsappLink" target="_blank" rel="noopener noreferrer">Partager sur WhatsApp</a>
+        </div>
         <button id="restartBtn">Recommencer une série</button>
       </section>
     </main>
@@ -118,11 +128,19 @@
 
   <script>
     const $ = s => document.querySelector(s);
-    const app = { mode:'mix', index:0, score:0, answered:false, total:10, current:null, showHelp:localStorage.getItem('electricite-help')!=='false' };
+    const app = { mode:'mix', index:0, score:0, answered:false, total:10, current:null, showHelp:localStorage.getItem('electricite-help')!=='false', helpUsed:false, completed:false, formulaCorrect:0, unitCorrect:0, numericCorrect:0, result:null };
     const pick = a => a[Math.floor(Math.random()*a.length)];
     const shuffle = a => [...a].sort(()=>Math.random()-.5);
     const fmt = n => Number(n.toFixed(4)).toLocaleString('fr-BE',{maximumFractionDigits:4});
     const fmtPrecise = n => Number(n.toFixed(6)).toLocaleString('fr-BE',{maximumFractionDigits:6});
+    const modeNames={ohm:'Loi d’Ohm',charge:'Charge électrique',power:'Puissance',pouillet:'Loi de Pouillet',section:'Section ronde',series:'Résistances en série',mix:'Calculs mélangés',formulas:'Équations'};
+    function finalPoints(){return app.score/(app.helpUsed?2:1)}
+    function updateScore(){
+      $('#score').textContent=`${fmt(finalPoints())} / ${app.total}`;
+      const rule=app.mode==='formulas'?'Équation : 0,5 pt · Unité : 0,5 pt.':'Bonne réponse : 1 pt.';
+      $('#scoringNote').textContent=rule+' '+(app.helpUsed?'Aides utilisées : total de cette série divisé par 2.':'Si les aides sont affichées, le total de la série sera divisé par 2.');
+      $('#scoringNote').dataset.assisted=String(app.helpUsed);
+    }
 
     function niceDistractors(answer){
       const candidates=[answer*10,answer/10,answer*2,answer/2,answer*5,answer/5,answer+1,Math.max(.001,answer-1)];
@@ -216,10 +234,11 @@
       let formulaCorrect;
       try{formulaCorrect=equivalent(equationTokens,app.current.answer.split(' = ')[1])}catch(error){$('#builderError').textContent=error.message+'. Corrige la saisie avant de valider.';return}
       const unitCorrect=selectedUnit===app.current.unit,correct=formulaCorrect&&unitCorrect;
-      app.answered=true;if(correct)app.score++;$('#score').textContent=app.score;
+      const earned=(formulaCorrect ? .5 : 0)+(unitCorrect ? .5 : 0);
+      app.answered=true;app.score+=earned;app.formulaCorrect+=Number(formulaCorrect);app.unitCorrect+=Number(unitCorrect);updateScore();
       document.querySelectorAll('#builder button').forEach(b=>b.disabled=true);
       const f=$('#feedback');f.className=`feedback show ${correct?'ok':'no'}`;
-      f.innerHTML=`<strong>${correct?'Bonne réponse !':'Pas tout à fait.'}</strong><div>Équation : ${formulaCorrect?'correcte ✓':'incorrecte ×'} · Unité : ${unitCorrect?'correcte ✓':'incorrecte ×'}</div><span class="calculation">${app.current.calc}</span>`;
+      f.innerHTML=`<strong>${correct?'Bonne réponse !':'Pas tout à fait.'} +${fmt(earned)} pt avant réduction éventuelle</strong><div>Équation : ${formulaCorrect?'correcte ✓ (+0,5)':'incorrecte × (+0)'} · Unité : ${unitCorrect?'correcte ✓ (+0,5)':'incorrecte × (+0)'}</div><span class="calculation">${app.current.calc}</span>`;
       $('#nextBtn').textContent=app.index===app.total-1?'Voir mon résultat':'Question suivante';$('#nextBtn').className='next show';
     };
 
@@ -299,6 +318,7 @@
     }
     function newQuestion(){
       app.answered=false;
+      if(app.showHelp)app.helpUsed=true;updateScore();
       const mode=app.mode==='mix'?pick(['ohm','charge','power','pouillet','section','series']):app.mode;
       const q=mode==='ohm'?ohmQuestion():mode==='charge'?chargeQuestion():mode==='power'?powerQuestion():mode==='pouillet'?pouilletQuestion():mode==='section'?sectionQuestion():mode==='series'?seriesQuestion():equationQuestion();
       if(!q.options)q.options=makeOptions(q.answer,q.unit); app.current=q;
@@ -315,22 +335,37 @@
     function answer(e){
       if(app.answered)return; app.answered=true;
       const correct=e.currentTarget.dataset.correct==='true';
-      if(correct)app.score++;
-      $('#score').textContent=app.score;
+      if(correct){app.score++;app.numericCorrect++}
+      updateScore();
       document.querySelectorAll('.answer').forEach(b=>{b.disabled=true;const isCorrect=b.dataset.correct==='true';if(isCorrect){b.classList.add('correct');b.insertAdjacentHTML('beforeend','<span class="mark">✓</span>')}else if(b===e.currentTarget){b.classList.add('wrong');b.insertAdjacentHTML('beforeend','<span class="mark">×</span>')}});
       const f=$('#feedback');f.className=`feedback show ${correct?'ok':'no'}`;f.innerHTML=`<strong>${correct?'Bonne réponse !':'Pas tout à fait.'}</strong><span class="calculation">${app.current.calc}</span>`;
       $('#nextBtn').textContent=app.index===app.total-1?'Voir mon résultat':'Question suivante';$('#nextBtn').className='next show';
     }
 
     function finish(){
+      if(app.completed)return;
+      app.completed=true;
       $('#quizCard').style.display='none'; $('#summary').classList.add('show'); $('#counter').textContent='Série terminée'; $('#progressFill').style.width='100%';
-      $('#finalScore').textContent=`${app.score}/${app.total}`;$('#gauge').style.setProperty('--score-angle',`${app.score/app.total*360}deg`);
+      const points=finalPoints();
+      $('#finalScore').textContent=`${fmt(points)} / ${app.total}`;$('#gauge').style.setProperty('--score-angle',`${points/app.total*360}deg`);
       const msg=app.score===10?'Parfait, les formules sont bien maîtrisées.':app.score>=7?'Très bien. Encore une série pour consolider les automatismes.':app.score>=5?'Bonne base. Reprenez les formules puis retentez une série.':'Continuez tranquillement : chaque calcul corrigé vous fait progresser.';
       $('#summaryText').textContent=msg;
-      const best=Math.max(app.score,Number(localStorage.getItem('electricite-best')||0));localStorage.setItem('electricite-best',best);
+      const detail=app.mode==='formulas'?`Équations correctes : ${app.formulaCorrect}/${app.total} → ${fmt(app.formulaCorrect*.5)} pts\nUnités correctes : ${app.unitCorrect}/${app.total} → ${fmt(app.unitCorrect*.5)} pts`:`Bonnes réponses : ${app.numericCorrect}/${app.total}`;
+      const breakdown=`${detail}\nTotal brut : ${fmt(app.score)} / ${app.total}\n${app.helpUsed?'Aides utilisées : total ÷ 2':'Sans aide : aucune réduction'}\nScore final : ${fmt(points)} / ${app.total}`;
+      $('#scoreBreakdown').textContent=breakdown;
+      const completedAt=new Date();
+      const text=`Atelier Électricité — Résultat\n${completedAt.toLocaleString('fr-BE')}\nMode : ${modeNames[app.mode]}\n${app.total} questions\n\n${breakdown}\n\nBarème : ${app.mode==='formulas'?'0,5 point par équation correcte et 0,5 point par unité correcte.':'1 point par bonne réponse.'}\nSi les aides ont été affichées pendant la série, le total est divisé par 2.`;
+      app.result=Object.freeze({text,filename:`resultat-electricite-${completedAt.toISOString().replace(/[:.]/g,'-')}.txt`,points});
+      $('#whatsappLink').href='https://wa.me/?text='+encodeURIComponent(text);
+      const best=Math.max(points,Number(localStorage.getItem('electricite-best-v2')||0));localStorage.setItem('electricite-best-v2',best);
     }
-    function restart(){app.index=0;app.score=0;$('#score').textContent='0';$('#summary').classList.remove('show');$('#quizCard').style.display='block';newQuestion()}
-    function setHelp(enabled){app.showHelp=enabled;document.body.classList.toggle('help-off',!enabled);$('#helpToggle').checked=enabled;localStorage.setItem('electricite-help',String(enabled))}
+    function restart(){app.index=0;app.score=0;app.helpUsed=false;app.completed=false;app.formulaCorrect=0;app.unitCorrect=0;app.numericCorrect=0;app.result=null;$('#whatsappLink').removeAttribute('href');$('#summary').classList.remove('show');$('#quizCard').style.display='block';newQuestion()}
+    function setHelp(enabled){app.showHelp=enabled;if(enabled&&app.current&&!app.completed)app.helpUsed=true;document.body.classList.toggle('help-off',!enabled);$('#helpToggle').checked=enabled;localStorage.setItem('electricite-help',String(enabled));updateScore()}
+    $('#exportBtn').addEventListener('click',()=>{
+      if(!app.result)return;
+      const url=URL.createObjectURL(new Blob(['\uFEFF',app.result.text],{type:'text/plain;charset=utf-8'}));
+      const link=document.createElement('a');link.href=url;link.download=app.result.filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    });
     $('#nextBtn').addEventListener('click',()=>{app.index++;app.index>=app.total?finish():newQuestion()});
     $('#restartBtn').addEventListener('click',restart);
     document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected','false'));b.setAttribute('aria-selected','true');app.mode=b.dataset.mode;restart()}));
@@ -345,8 +380,8 @@
       const register=tool=>Promise.resolve(document.modelContext.registerTool(tool,{signal:toolLife.signal})).catch(()=>{});
       register({name:'read_current_question',title:'Lire la question',description:'Retourne la question et les choix ou boutons disponibles.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute:()=>({question:app.current.question,given:app.current.given,options:app.current.options.map(o=>o.label),builder:app.current.kind==='equation'?{target:app.current.target,variables,units:unitChoices,context:app.current.unitContext}:null,questionNumber:app.index+1,total:app.total})});
       register({name:'start_quiz_series',title:'Démarrer une série',description:'Démarre une nouvelle série de dix questions dans le thème choisi.',inputSchema:{type:'object',properties:{mode:{type:'string',enum:['ohm','charge','power','pouillet','section','series','mix','formulas']}},required:['mode'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(!['ohm','charge','power','pouillet','section','series','mix','formulas'].includes(input?.mode))throw new Error('Mode invalide');document.querySelector(`[data-mode="${input.mode}"]`).click();return{status:'started',mode:input.mode,total:app.total}}});
-      register({name:'answer_current_question',title:'Répondre au QCM',description:'Sélectionne une réponse dans les exercices chiffrés.',inputSchema:{type:'object',properties:{option:{type:'integer',minimum:1,maximum:4}},required:['option'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(app.current.kind==='equation')throw new Error('Utilisez submit_equation pour construire une équation');if(!Number.isInteger(input?.option)||input.option<1||input.option>4)throw new Error('L’option doit être comprise entre 1 et 4');if(app.answered)throw new Error('Cette question a déjà reçu une réponse');const button=document.querySelectorAll('.answer')[input.option-1];const correct=button.dataset.correct==='true';button.click();return{correct,score:app.score,calculation:app.current.calc}}});
-      register({name:'submit_equation',title:'Construire une équation',description:'Valide les symboles de la partie droite et son unité dans le mode Équations.',inputSchema:{type:'object',properties:{tokens:{type:'array',items:{type:'string',enum:[...variables,...operators]}},unit:{type:'string',enum:unitChoices}},required:['tokens','unit'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(app.current.kind!=='equation'||app.answered)throw new Error('Aucune équation à compléter');if(!Array.isArray(input.tokens)||!input.tokens.length||input.tokens.length>100||input.tokens.some(t=>![...variables,...operators].includes(t))||!unitChoices.includes(input.unit))throw new Error('Symboles ou unité invalides');equationTokens=[...input.tokens];selectedUnit=input.unit;refreshBuilder();$('#validateBtn').click();return{answered:app.answered,score:app.score,error:$('#builderError').textContent}}});
+      register({name:'answer_current_question',title:'Répondre au QCM',description:'Sélectionne une réponse dans les exercices chiffrés.',inputSchema:{type:'object',properties:{option:{type:'integer',minimum:1,maximum:4}},required:['option'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(app.current.kind==='equation')throw new Error('Utilisez submit_equation pour construire une équation');if(!Number.isInteger(input?.option)||input.option<1||input.option>4)throw new Error('L’option doit être comprise entre 1 et 4');if(app.answered)throw new Error('Cette question a déjà reçu une réponse');const button=document.querySelectorAll('.answer')[input.option-1];const correct=button.dataset.correct==='true';button.click();return{correct,score:finalPoints(),rawScore:app.score,calculation:app.current.calc}}});
+      register({name:'submit_equation',title:'Construire une équation',description:'Valide les symboles de la partie droite et son unité dans le mode Équations.',inputSchema:{type:'object',properties:{tokens:{type:'array',items:{type:'string',enum:[...variables,...operators]}},unit:{type:'string',enum:unitChoices}},required:['tokens','unit'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(app.current.kind!=='equation'||app.answered)throw new Error('Aucune équation à compléter');if(!Array.isArray(input.tokens)||!input.tokens.length||input.tokens.length>100||input.tokens.some(t=>![...variables,...operators].includes(t))||!unitChoices.includes(input.unit))throw new Error('Symboles ou unité invalides');equationTokens=[...input.tokens];selectedUnit=input.unit;refreshBuilder();$('#validateBtn').click();return{answered:app.answered,score:finalPoints(),rawScore:app.score,error:$('#builderError').textContent}}});
     }
   </script>
 </body>
