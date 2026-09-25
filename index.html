@@ -39,6 +39,12 @@
     .given{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:22px}
     .meter{background:#071927;border:1px solid #25445d;border-radius:13px;padding:13px 14px}.meter span{display:block;color:var(--muted);font-size:.75rem;margin-bottom:3px}.meter strong{font-size:1.15rem;color:#fff;font-variant-numeric:tabular-nums}
     .answers{display:grid;gap:10px}
+    [hidden]{display:none!important}
+    .builder fieldset{border:0;padding:0;margin:0 0 16px;min-width:0}.builder legend{font-size:.9rem;color:var(--muted);margin-bottom:8px}
+    .keys{display:flex;flex-wrap:wrap;gap:8px}.key{min-width:46px;min-height:46px;padding:9px 13px;border:1px solid #31516a;border-radius:10px;background:#0b2032;color:var(--text);font-size:1rem;font-weight:750;cursor:pointer}.key[aria-pressed="true"]{background:#164454;border-color:var(--cyan);color:var(--cyan)}
+    .key:disabled{opacity:.55;cursor:default}button:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+    .equation-display{padding:16px;margin:8px 0 10px;min-height:62px;border:1px solid var(--cyan);border-radius:12px;background:#071927;font-size:1.35rem;overflow-wrap:anywhere;line-height:1.5}.edit-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.edit-actions .key{font-size:.875rem}
+    .validate{width:100%;min-height:50px;border:0;border-radius:12px;background:var(--cyan);color:#06202b;font-weight:850;cursor:pointer}.validate:disabled{opacity:.45;cursor:default}.unit-context{color:var(--muted);font-size:.9rem;line-height:1.5;margin:0 0 16px}.builder-error{color:var(--red);font-size:.9rem}.builder .keys{margin-bottom:8px}
     .answer{position:relative;width:100%;min-height:56px;padding:13px 48px 13px 16px;border:1px solid #31516a;border-radius:14px;background:#0b2032;color:var(--text);text-align:left;font-weight:780;cursor:pointer;transition:transform .14s ease,border-color .14s ease,background .14s ease}
     .answer:hover{border-color:#4f7897}.answer:active{transform:scale(.985)}
     .answer .letter{display:inline-grid;place-items:center;width:27px;height:27px;margin-right:10px;border-radius:8px;background:#18374f;color:var(--cyan);font-size:.8rem}
@@ -83,6 +89,16 @@
         <h2 class="question" id="questionText">Chargement de la question…</h2>
         <div class="given" id="given"></div>
         <div class="answers" id="answers" role="group" aria-label="Réponses proposées"></div>
+        <div class="builder" id="builder" hidden>
+          <p class="unit-context" id="unitContext"></p>
+          <fieldset><legend>Variables du cours</legend><div class="keys" id="variableKeys"></div></fieldset>
+          <fieldset><legend>Opérations</legend><div class="keys" id="operatorKeys"></div></fieldset>
+          <div class="equation-display" aria-live="polite" aria-label="Votre équation"><span id="equationTarget"></span> = <span id="equationInput">…</span></div>
+          <div class="edit-actions"><button class="key" id="backspaceBtn">⌫ Effacer le dernier</button><button class="key" id="clearBtn">Tout effacer</button></div>
+          <fieldset><legend>Le résultat s’exprime en…</legend><div class="keys" id="unitKeys"></div></fieldset>
+          <p class="builder-error" id="builderError" role="status"></p>
+          <button class="validate" id="validateBtn" disabled>Valider l’équation et l’unité</button>
+        </div>
         <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
         <button class="next" id="nextBtn">Question suivante</button>
       </section>
@@ -133,8 +149,56 @@
     ];
     function equationQuestion(){
       const item=pick(equationBank);
-      return {topic:'Équations · '+item.family,formula:'Choisissez la bonne équation',question:item.question,given:[],answer:item.answer,options:shuffle([item.answer,...item.wrong]).map(v=>({value:v,label:v,correct:v===item.answer})),calc:`Réponse : ${item.answer}`};
+      const target=item.answer.split(' = ')[0];
+      const units={I:'A',U:'V',R:'Ω',P:'W',Q:'C',T:'s',ρ:'Ω·mm²/m',L:'m',S:'mm²'};
+      const hours=item.family==='Charge électrique'&&Math.random()<.5;
+      if(hours){units.Q='Ah';units.T='h'}
+      // Only show the GIVEN quantities’ units, never the requested answer unit.
+      const givenUnits=item.answer.split(' = ')[1].split(' ').filter(v=>units[v]).map(v=>`${v} en ${units[v]}`);
+      return {kind:'equation',target,topic:'Équations · '+item.family,formula:item.answer,question:item.question,given:[],answer:item.answer,unit:units[target],unitContext:'Données exprimées avec '+givenUnits.join(', ')+'.',options:[],calc:`${item.answer} ; unité : ${units[target]}`};
     }
+
+    const variables=['U','I','R','P','Q','T','ρ','L','S'];
+    const unitChoices=['V','A','Ω','W','C','Ah','s','h','m','mm²','Ω·mm²/m'];
+    let equationTokens=[],selectedUnit='';
+    // Exact symbolic comparison of products/quotients, including reordered factors and parentheses.
+    function symbolic(tokens){
+      let pos=0;
+      const combine=(a,b,sign)=>({c:sign===1?a.c*b.c:a.c/b.c,p:a.p.map((v,i)=>v+sign*b.p[i])});
+      function atom(){const t=tokens[pos++];if(t==='('){const v=sum();if(tokens[pos++]!==')')throw Error('Parenthèse manquante');return v}if(!variables.includes(t))throw Error('Variable attendue');return {c:1,p:variables.map(v=>v===t?1:0)}}
+      function product(){let a=atom();while(tokens[pos]==='×'||tokens[pos]==='÷'){const op=tokens[pos++];a=combine(a,atom(),op==='×'?1:-1)}return a}
+      function sum(){let a=product();while(tokens[pos]==='+'||tokens[pos]==='−'){const op=tokens[pos++],b=product();if(a.p.some((v,i)=>v!==b.p[i]))throw Error('Utilise un produit ou un quotient des variables demandées');a={c:a.c+(op==='+'?b.c:-b.c),p:a.p}}return a}
+      const result=sum();if(pos!==tokens.length||!Number.isFinite(result.c))throw Error('Équation incomplète ou mal formée');return result;
+    }
+    function equivalent(tokens,expected){try{const a=symbolic(tokens),b=symbolic(expected.split(' '));return a.c===b.c&&a.p.every((v,i)=>v===b.p[i])}catch(error){if(error.message==='Utilise un produit ou un quotient des variables demandées')return false;throw error}}
+    function refreshBuilder(){
+      $('#equationInput').textContent=equationTokens.join(' ')||'…';
+      $('#validateBtn').disabled=app.answered||!equationTokens.length||!selectedUnit;
+      $('#backspaceBtn').disabled=app.answered||!equationTokens.length;
+      document.querySelectorAll('#unitKeys button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.unit===selectedUnit)));
+      $('#builderError').textContent='';
+    }
+    function setupBuilder(){
+      equationTokens=[];selectedUnit='';$('#equationTarget').textContent=app.current.target;$('#unitContext').textContent=app.current.unitContext;
+      for(const [id,values] of [['variableKeys',variables],['operatorKeys',['+','−','×','÷','(',')']]]){
+        $('#'+id).replaceChildren(...values.map(value=>{const b=document.createElement('button');b.className='key';b.textContent=value;b.onclick=()=>{if(app.answered)return;equationTokens.push(value);refreshBuilder()};return b}));
+      }
+      $('#unitKeys').replaceChildren(...unitChoices.map(unit=>{const b=document.createElement('button');b.className='key';b.dataset.unit=unit;b.textContent=unit;b.setAttribute('aria-pressed','false');b.onclick=()=>{if(app.answered)return;selectedUnit=unit;refreshBuilder()};return b}));
+      $('#clearBtn').disabled=false;refreshBuilder();
+    }
+    $('#backspaceBtn').onclick=()=>{if(!app.answered){equationTokens.pop();refreshBuilder()}};
+    $('#clearBtn').onclick=()=>{if(!app.answered){equationTokens=[];selectedUnit='';refreshBuilder()}};
+    $('#validateBtn').onclick=()=>{
+      if(app.answered||!equationTokens.length||!selectedUnit)return;
+      let formulaCorrect;
+      try{formulaCorrect=equivalent(equationTokens,app.current.answer.split(' = ')[1])}catch(error){$('#builderError').textContent=error.message+'. Corrige la saisie avant de valider.';return}
+      const unitCorrect=selectedUnit===app.current.unit,correct=formulaCorrect&&unitCorrect;
+      app.answered=true;if(correct)app.score++;$('#score').textContent=app.score;
+      document.querySelectorAll('#builder button').forEach(b=>b.disabled=true);
+      const f=$('#feedback');f.className=`feedback show ${correct?'ok':'no'}`;
+      f.innerHTML=`<strong>${correct?'Bonne réponse !':'Pas tout à fait.'}</strong><div>Équation : ${formulaCorrect?'correcte ✓':'incorrecte ×'} · Unité : ${unitCorrect?'correcte ✓':'incorrecte ×'}</div><span class="calculation">${app.current.calc}</span>`;
+      $('#nextBtn').textContent=app.index===app.total-1?'Voir mon résultat':'Question suivante';$('#nextBtn').className='next show';
+    };
 
     function ohmQuestion(){
       const type=pick(['u','i','r']);
@@ -187,6 +251,7 @@
       const mode=app.mode==='mix'?pick(['ohm','charge','power','pouillet']):app.mode;
       const q=mode==='ohm'?ohmQuestion():mode==='charge'?chargeQuestion():mode==='power'?powerQuestion():mode==='pouillet'?pouilletQuestion():equationQuestion();
       if(!q.options)q.options=makeOptions(q.answer,q.unit); app.current=q;
+      $('#answers').hidden=q.kind==='equation';$('#builder').hidden=q.kind!=='equation';if(q.kind==='equation')setupBuilder();
       $('#topic').textContent=q.topic; $('#formula').textContent=q.formula; $('#questionText').textContent=q.question;
       $('#given').innerHTML=q.given.map(([label,value])=>`<div class="meter"><span>${label}</span><strong>${value}</strong></div>`).join('');
       $('#answers').innerHTML=q.options.map((o,n)=>`<button class="answer" data-correct="${o.correct}"><span class="letter">${String.fromCharCode(65+n)}</span>${o.label}</button>`).join('');
@@ -227,9 +292,10 @@
     if(document.modelContext?.registerTool){
       const toolLife=new AbortController();
       const register=tool=>Promise.resolve(document.modelContext.registerTool(tool,{signal:toolLife.signal})).catch(()=>{});
-      register({name:'read_current_question',title:'Lire la question',description:'Retourne la question de calcul électrique actuellement affichée et ses réponses proposées.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute:()=>({question:app.current.question,given:app.current.given,options:app.current.options.map(o=>o.label),questionNumber:app.index+1,total:app.total})});
+      register({name:'read_current_question',title:'Lire la question',description:'Retourne la question et les choix ou boutons disponibles.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute:()=>({question:app.current.question,given:app.current.given,options:app.current.options.map(o=>o.label),builder:app.current.kind==='equation'?{target:app.current.target,variables,units:unitChoices,context:app.current.unitContext}:null,questionNumber:app.index+1,total:app.total})});
       register({name:'start_quiz_series',title:'Démarrer une série',description:'Démarre une nouvelle série de dix questions dans le thème choisi.',inputSchema:{type:'object',properties:{mode:{type:'string',enum:['ohm','charge','power','pouillet','mix','formulas']}},required:['mode'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(!['ohm','charge','power','pouillet','mix','formulas'].includes(input?.mode))throw new Error('Mode invalide');document.querySelector(`[data-mode="${input.mode}"]`).click();return{status:'started',mode:input.mode,total:app.total}}});
-      register({name:'answer_current_question',title:'Répondre à la question',description:'Sélectionne l’une des quatre réponses de la question actuellement affichée.',inputSchema:{type:'object',properties:{option:{type:'integer',minimum:1,maximum:4}},required:['option'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(!Number.isInteger(input?.option)||input.option<1||input.option>4)throw new Error('L’option doit être comprise entre 1 et 4');if(app.answered)throw new Error('Cette question a déjà reçu une réponse');const button=document.querySelectorAll('.answer')[input.option-1];const correct=button.dataset.correct==='true';button.click();return{correct,score:app.score,calculation:app.current.calc}}});
+      register({name:'answer_current_question',title:'Répondre au QCM',description:'Sélectionne une réponse dans les exercices chiffrés.',inputSchema:{type:'object',properties:{option:{type:'integer',minimum:1,maximum:4}},required:['option'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(app.current.kind==='equation')throw new Error('Utilisez submit_equation pour construire une équation');if(!Number.isInteger(input?.option)||input.option<1||input.option>4)throw new Error('L’option doit être comprise entre 1 et 4');if(app.answered)throw new Error('Cette question a déjà reçu une réponse');const button=document.querySelectorAll('.answer')[input.option-1];const correct=button.dataset.correct==='true';button.click();return{correct,score:app.score,calculation:app.current.calc}}});
+      register({name:'submit_equation',title:'Construire une équation',description:'Valide les symboles de la partie droite et son unité dans le mode Équations.',inputSchema:{type:'object',properties:{tokens:{type:'array',items:{type:'string',enum:[...variables,'+','−','×','÷','(',')']}},unit:{type:'string',enum:unitChoices}},required:['tokens','unit'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(app.current.kind!=='equation'||app.answered)throw new Error('Aucune équation à compléter');if(!Array.isArray(input.tokens)||!input.tokens.length||input.tokens.length>100||input.tokens.some(t=>![...variables,'+','−','×','÷','(',')'].includes(t))||!unitChoices.includes(input.unit))throw new Error('Symboles ou unité invalides');equationTokens=[...input.tokens];selectedUnit=input.unit;refreshBuilder();$('#validateBtn').click();return{answered:app.answered,score:app.score,error:$('#builderError').textContent}}});
     }
   </script>
 </body>
