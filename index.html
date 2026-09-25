@@ -58,7 +58,7 @@
     .summary{display:none;text-align:center}.summary.show{display:block}.summary .gauge{width:112px;height:112px;margin:8px auto 20px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--cyan) var(--score-angle),#17344b 0);position:relative}.summary .gauge:after{content:"";position:absolute;inset:9px;border-radius:50%;background:#0d2235}.summary .gauge strong{position:relative;z-index:1;font-size:1.55rem}.summary h2{font-size:1.55rem;margin:0 0 8px}.summary p{color:var(--muted);line-height:1.5;margin:0 0 20px}.summary button{width:100%;min-height:54px;border:0;border-radius:14px;background:var(--cyan);color:#06202b;font-weight:900;cursor:pointer}
     .install{display:none;border:1px solid #31516a;background:#0b2032;color:var(--muted);padding:8px 11px;border-radius:10px;font-size:.76rem;cursor:pointer}.install.show{display:block}
     .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    @media (min-width:700px){.app{padding-top:32px}.tabs{grid-template-columns:repeat(6,1fr)}.formula-mode{grid-column:auto}.card{padding:28px}.question{margin-top:30px}.answer{min-height:60px}}
+    @media (min-width:700px){.app{padding-top:32px}.tabs{grid-template-columns:repeat(4,1fr)}.formula-mode{grid-column:auto}.card{padding:28px}.question{margin-top:30px}.answer{min-height:60px}}
     @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
@@ -75,6 +75,8 @@
       <button data-mode="charge" aria-selected="false">Charge</button>
       <button data-mode="power" aria-selected="false">Puissance</button>
       <button data-mode="pouillet" aria-selected="false">Pouillet</button>
+      <button data-mode="section" aria-selected="false">Section ronde</button>
+      <button data-mode="series" aria-selected="false">En série</button>
       <button data-mode="mix" aria-selected="true">Mélangé</button>
       <button class="formula-mode" data-mode="formulas" aria-selected="false">Équations</button>
     </nav>
@@ -147,10 +149,23 @@
       {question:'Quelle équation calcule la longueur L à partir de R, ρ et S ?',answer:'L = R × S ÷ ρ',wrong:['L = R × ρ ÷ S','L = ρ × S ÷ R','L = R × ρ × S'],family:'Loi de Pouillet'},
       {question:'Quelle équation calcule la section S à partir de ρ, L et R ?',answer:'S = ρ × L ÷ R',wrong:['S = ρ × R ÷ L','S = L × R ÷ ρ','S = ρ × L × R'],family:'Loi de Pouillet'}
     ];
+    equationBank.push(
+      {question:'Quelle équation calcule la section S d’un conducteur rond à partir du rayon r ?',answer:'S = π × r ²',family:'Section ronde'},
+      {question:'Quelle équation calcule la section S d’un conducteur rond à partir du diamètre d ?',answer:'S = π × d ² ÷ 4',family:'Section ronde'},
+      {question:'Quelle équation calcule le rayon r à partir de la section S ?',answer:'r = √ ( S ÷ π )',family:'Section ronde'},
+      {question:'Quelle équation calcule le diamètre d à partir de la section S ?',answer:'d = 2 × √ ( S ÷ π )',family:'Section ronde'},
+      {question:'Quelle équation calcule le diamètre d à partir du rayon r ?',answer:'d = 2 × r',family:'Section ronde'},
+      {question:'Quelle équation calcule le rayon r à partir du diamètre d ?',answer:'r = d ÷ 2',family:'Section ronde'},
+      {question:'En série, quelle équation calcule Rₜ à partir de R₁ et R₂ ?',answer:'Rₜ = R₁ + R₂',family:'Résistances en série'},
+      {question:'En série, quelle équation calcule Rₜ à partir de R₁, R₂ et R₃ ?',answer:'Rₜ = R₁ + R₂ + R₃',family:'Résistances en série'},
+      {question:'Quelle résistance R₂ ajouter en série à R₁ pour atteindre le total Rₜ ?',answer:'R₂ = Rₜ − R₁',family:'Résistances en série'},
+      {question:'Quelle résistance R₃ ajouter en série à R₁ et R₂ pour atteindre Rₜ ?',answer:'R₃ = Rₜ − R₁ − R₂',family:'Résistances en série'},
+      {question:'En série, quelle équation retrouve R₁ à partir du total Rₜ et de R₂ ?',answer:'R₁ = Rₜ − R₂',family:'Résistances en série'}
+    );
     function equationQuestion(){
       const item=pick(equationBank);
       const target=item.answer.split(' = ')[0];
-      const units={I:'A',U:'V',R:'Ω',P:'W',Q:'C',T:'s',ρ:'Ω·mm²/m',L:'m',S:'mm²'};
+      const units={I:'A',U:'V',R:'Ω',P:'W',Q:'C',T:'s',ρ:'Ω·mm²/m',L:'m',S:'mm²',r:'mm',d:'mm','Rₜ':'Ω','R₁':'Ω','R₂':'Ω','R₃':'Ω'};
       const hours=item.family==='Charge électrique'&&Math.random()<.5;
       if(hours){units.Q='Ah';units.T='h'}
       // Only show the GIVEN quantities’ units, never the requested answer unit.
@@ -158,19 +173,27 @@
       return {kind:'equation',target,topic:'Équations · '+item.family,formula:item.answer,question:item.question,given:[],answer:item.answer,unit:units[target],unitContext:'Données exprimées avec '+givenUnits.join(', ')+'.',options:[],calc:`${item.answer} ; unité : ${units[target]}`};
     }
 
-    const variables=['U','I','R','P','Q','T','ρ','L','S'];
-    const unitChoices=['V','A','Ω','W','C','Ah','s','h','m','mm²','Ω·mm²/m'];
+    const variables=['U','I','R','P','Q','T','ρ','L','S','r','d','Rₜ','R₁','R₂','R₃'];
+    const operators=['+','−','×','÷','(',')','π','²','√','2','4'];
+    const unitChoices=['V','A','Ω','W','C','Ah','s','h','m','mm','mm²','Ω·mm²/m'];
     let equationTokens=[],selectedUnit='';
-    // Exact symbolic comparison of products/quotients, including reordered factors and parentheses.
-    function symbolic(tokens){
+    // Parse button tokens without eval; respect parentheses and arithmetic precedence.
+    function parseExpression(tokens){
       let pos=0;
-      const combine=(a,b,sign)=>({c:sign===1?a.c*b.c:a.c/b.c,p:a.p.map((v,i)=>v+sign*b.p[i])});
-      function atom(){const t=tokens[pos++];if(t==='('){const v=sum();if(tokens[pos++]!==')')throw Error('Parenthèse manquante');return v}if(!variables.includes(t))throw Error('Variable attendue');return {c:1,p:variables.map(v=>v===t?1:0)}}
-      function product(){let a=atom();while(tokens[pos]==='×'||tokens[pos]==='÷'){const op=tokens[pos++];a=combine(a,atom(),op==='×'?1:-1)}return a}
-      function sum(){let a=product();while(tokens[pos]==='+'||tokens[pos]==='−'){const op=tokens[pos++],b=product();if(a.p.some((v,i)=>v!==b.p[i]))throw Error('Utilise un produit ou un quotient des variables demandées');a={c:a.c+(op==='+'?b.c:-b.c),p:a.p}}return a}
-      const result=sum();if(pos!==tokens.length||!Number.isFinite(result.c))throw Error('Équation incomplète ou mal formée');return result;
+      function atom(){const t=tokens[pos++];if(t==='('){const v=sum();if(tokens[pos++]!==')')throw Error('Parenthèse manquante');return v}if(t==='√'){const v=atom();return x=>Math.sqrt(v(x))}if(t==='π')return ()=>Math.PI;if(t==='2'||t==='4')return ()=>Number(t);if(!variables.includes(t))throw Error('Variable ou constante attendue');return x=>x[t]}
+      function power(){let a=atom();while(tokens[pos]==='²'){pos++;const prev=a;a=x=>prev(x)**2}return a}
+      function product(){let a=power();while(tokens[pos]==='×'||tokens[pos]==='÷'){const op=tokens[pos++],left=a,right=power();a=x=>op==='×'?left(x)*right(x):left(x)/right(x)}return a}
+      function sum(){let a=product();while(tokens[pos]==='+'||tokens[pos]==='−'){const op=tokens[pos++],left=a,right=product();a=x=>op==='+'?left(x)+right(x):left(x)-right(x)}return a}
+      const result=sum();if(pos!==tokens.length)throw Error('Équation incomplète ou mal formée');return result;
     }
-    function equivalent(tokens,expected){try{const a=symbolic(tokens),b=symbolic(expected.split(' '));return a.c===b.c&&a.p.every((v,i)=>v===b.p[i])}catch(error){if(error.message==='Utilise un produit ou un quotient des variables demandées')return false;throw error}}
+    function equivalent(tokens,expected){
+      const a=parseExpression(tokens),b=parseExpression(expected.split(' '));
+      // Independent positive values cover all variables; no algebraic relation is assumed.
+      for(let trial=1;trial<=24;trial++){
+        const values=Object.fromEntries(variables.map((v,j)=>[v,.3+Math.abs(Math.sin(trial*12.9898+(j+1)*78.233))*97]));
+        const av=a(values),bv=b(values);if(!Number.isFinite(av)||!Number.isFinite(bv)||Math.abs(av-bv)>1e-9*Math.max(1,Math.abs(bv)))return false;
+      }return true;
+    }
     function refreshBuilder(){
       $('#equationInput').textContent=equationTokens.join(' ')||'…';
       $('#validateBtn').disabled=app.answered||!equationTokens.length||!selectedUnit;
@@ -180,7 +203,7 @@
     }
     function setupBuilder(){
       equationTokens=[];selectedUnit='';$('#equationTarget').textContent=app.current.target;$('#unitContext').textContent=app.current.unitContext;
-      for(const [id,values] of [['variableKeys',variables],['operatorKeys',['+','−','×','÷','(',')']]]){
+      for(const [id,values] of [['variableKeys',variables],['operatorKeys',operators]]){
         $('#'+id).replaceChildren(...values.map(value=>{const b=document.createElement('button');b.className='key';b.textContent=value;b.onclick=()=>{if(app.answered)return;equationTokens.push(value);refreshBuilder()};return b}));
       }
       $('#unitKeys').replaceChildren(...unitChoices.map(unit=>{const b=document.createElement('button');b.className='key';b.dataset.unit=unit;b.textContent=unit;b.setAttribute('aria-pressed','false');b.onclick=()=>{if(app.answered)return;selectedUnit=unit;refreshBuilder()};return b}));
@@ -246,10 +269,38 @@
       return {topic:'Loi de Pouillet · '+material.name,formula:'S = ρ × L ÷ R',question:'Quelle est la section S du conducteur ?',given:[['Résistivité ρ',`${fmtPrecise(material.rho)} Ω·mm²/m`],['Longueur L',`${fmt(l)} m`],['Résistance R',`${fmtPrecise(r)} Ω`]],answer:s,unit:'mm²',calc:`S = ${fmtPrecise(material.rho)} × ${fmt(l)} ÷ ${fmtPrecise(r)} = ${fmt(s)} mm²`};
     }
 
+    function sectionQuestion(){
+      const type=pick(['sr','sd','rs','ds','dr','rd']);
+      const r=pick([.25,.5,.75,1,1.25,1.5,2,2.5,3,4]);const d=2*r;
+      const s=pick([.5,.75,1,1.5,2.5,4,6,10,16,25]);
+      const cases={
+        sr:{question:'Quelle est la surface de section S du conducteur rond ?',given:[['Rayon r',`${fmt(r)} mm`]],answer:Math.PI*r*r,unit:'mm²',formula:'S = π × r²',calc:`S = π × ${fmt(r)}²`},
+        sd:{question:'Quelle est la surface de section S du conducteur rond ?',given:[['Diamètre d',`${fmt(d)} mm`]],answer:Math.PI*d*d/4,unit:'mm²',formula:'S = π × d² ÷ 4',calc:`S = π × ${fmt(d)}² ÷ 4`},
+        rs:{question:'Quel est le rayon r du conducteur rond ?',given:[['Section S',`${fmt(s)} mm²`]],answer:Math.sqrt(s/Math.PI),unit:'mm',formula:'r = √(S ÷ π)',calc:`r = √(${fmt(s)} ÷ π)`},
+        ds:{question:'Quel est le diamètre d du conducteur rond ?',given:[['Section S',`${fmt(s)} mm²`]],answer:2*Math.sqrt(s/Math.PI),unit:'mm',formula:'d = 2 × √(S ÷ π)',calc:`d = 2 × √(${fmt(s)} ÷ π)`},
+        dr:{question:'Quel est le diamètre d du conducteur rond ?',given:[['Rayon r',`${fmt(r)} mm`]],answer:d,unit:'mm',formula:'d = 2 × r',calc:`d = 2 × ${fmt(r)}`},
+        rd:{question:'Quel est le rayon r du conducteur rond ?',given:[['Diamètre d',`${fmt(d)} mm`]],answer:r,unit:'mm',formula:'r = d ÷ 2',calc:`r = ${fmt(d)} ÷ 2`}
+      };
+      const q=cases[type];q.answer=Number(q.answer.toFixed(4));
+      return {...q,topic:'Section ronde',question:q.question+' (Arrondi à 4 décimales si nécessaire.)',calc:q.calc+` ≈ ${fmt(q.answer)} ${q.unit}`};
+    }
+    function seriesQuestion(){
+      const values=[5,10,15,22,33,47,68,100,150,220,330,470];
+      const r1=pick(values),r2=pick(values),r3=pick(values),total=r1+r2+r3;
+      const meter=(label,n)=>[label,`${fmt(n)} Ω`];
+      const cases=[
+        {question:'R₁ et R₂ sont en série. Quelle est la résistance totale Rₜ ?',given:[meter('R₁',r1),meter('R₂',r2)],answer:r1+r2,formula:'Rₜ = R₁ + R₂',calc:`Rₜ = ${r1} + ${r2}`},
+        {question:'R₁, R₂ et R₃ sont en série. Quelle est la résistance totale Rₜ ?',given:[meter('R₁',r1),meter('R₂',r2),meter('R₃',r3)],answer:total,formula:'Rₜ = R₁ + R₂ + R₃',calc:`Rₜ = ${r1} + ${r2} + ${r3}`},
+        {question:'Quelle résistance R₂ ajouter en série à R₁ pour atteindre le total souhaité Rₜ ?',given:[meter('R₁ existante',r1),meter('Total souhaité Rₜ',r1+r2)],answer:r2,formula:'R₂ = Rₜ − R₁',calc:`R₂ = ${r1+r2} − ${r1}`},
+        {question:'Quelle résistance R₃ ajouter en série à R₁ et R₂ pour atteindre Rₜ ?',given:[meter('R₁',r1),meter('R₂',r2),meter('Total souhaité Rₜ',total)],answer:r3,formula:'R₃ = Rₜ − R₁ − R₂',calc:`R₃ = ${total} − ${r1} − ${r2}`},
+        {question:'Deux résistances sont en série. Quelle est la résistance inconnue R₁ ?',given:[meter('Total Rₜ',r1+r2),meter('R₂ connue',r2)],answer:r1,formula:'R₁ = Rₜ − R₂',calc:`R₁ = ${r1+r2} − ${r2}`}
+      ];
+      const q=pick(cases);return {...q,topic:'Résistances en série',unit:'Ω',calc:q.calc+` = ${q.answer} Ω`};
+    }
     function newQuestion(){
       app.answered=false;
-      const mode=app.mode==='mix'?pick(['ohm','charge','power','pouillet']):app.mode;
-      const q=mode==='ohm'?ohmQuestion():mode==='charge'?chargeQuestion():mode==='power'?powerQuestion():mode==='pouillet'?pouilletQuestion():equationQuestion();
+      const mode=app.mode==='mix'?pick(['ohm','charge','power','pouillet','section','series']):app.mode;
+      const q=mode==='ohm'?ohmQuestion():mode==='charge'?chargeQuestion():mode==='power'?powerQuestion():mode==='pouillet'?pouilletQuestion():mode==='section'?sectionQuestion():mode==='series'?seriesQuestion():equationQuestion();
       if(!q.options)q.options=makeOptions(q.answer,q.unit); app.current=q;
       $('#answers').hidden=q.kind==='equation';$('#builder').hidden=q.kind!=='equation';if(q.kind==='equation')setupBuilder();
       $('#topic').textContent=q.topic; $('#formula').textContent=q.formula; $('#questionText').textContent=q.question;
@@ -293,9 +344,9 @@
       const toolLife=new AbortController();
       const register=tool=>Promise.resolve(document.modelContext.registerTool(tool,{signal:toolLife.signal})).catch(()=>{});
       register({name:'read_current_question',title:'Lire la question',description:'Retourne la question et les choix ou boutons disponibles.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute:()=>({question:app.current.question,given:app.current.given,options:app.current.options.map(o=>o.label),builder:app.current.kind==='equation'?{target:app.current.target,variables,units:unitChoices,context:app.current.unitContext}:null,questionNumber:app.index+1,total:app.total})});
-      register({name:'start_quiz_series',title:'Démarrer une série',description:'Démarre une nouvelle série de dix questions dans le thème choisi.',inputSchema:{type:'object',properties:{mode:{type:'string',enum:['ohm','charge','power','pouillet','mix','formulas']}},required:['mode'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(!['ohm','charge','power','pouillet','mix','formulas'].includes(input?.mode))throw new Error('Mode invalide');document.querySelector(`[data-mode="${input.mode}"]`).click();return{status:'started',mode:input.mode,total:app.total}}});
+      register({name:'start_quiz_series',title:'Démarrer une série',description:'Démarre une nouvelle série de dix questions dans le thème choisi.',inputSchema:{type:'object',properties:{mode:{type:'string',enum:['ohm','charge','power','pouillet','section','series','mix','formulas']}},required:['mode'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(!['ohm','charge','power','pouillet','section','series','mix','formulas'].includes(input?.mode))throw new Error('Mode invalide');document.querySelector(`[data-mode="${input.mode}"]`).click();return{status:'started',mode:input.mode,total:app.total}}});
       register({name:'answer_current_question',title:'Répondre au QCM',description:'Sélectionne une réponse dans les exercices chiffrés.',inputSchema:{type:'object',properties:{option:{type:'integer',minimum:1,maximum:4}},required:['option'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(app.current.kind==='equation')throw new Error('Utilisez submit_equation pour construire une équation');if(!Number.isInteger(input?.option)||input.option<1||input.option>4)throw new Error('L’option doit être comprise entre 1 et 4');if(app.answered)throw new Error('Cette question a déjà reçu une réponse');const button=document.querySelectorAll('.answer')[input.option-1];const correct=button.dataset.correct==='true';button.click();return{correct,score:app.score,calculation:app.current.calc}}});
-      register({name:'submit_equation',title:'Construire une équation',description:'Valide les symboles de la partie droite et son unité dans le mode Équations.',inputSchema:{type:'object',properties:{tokens:{type:'array',items:{type:'string',enum:[...variables,'+','−','×','÷','(',')']}},unit:{type:'string',enum:unitChoices}},required:['tokens','unit'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(app.current.kind!=='equation'||app.answered)throw new Error('Aucune équation à compléter');if(!Array.isArray(input.tokens)||!input.tokens.length||input.tokens.length>100||input.tokens.some(t=>![...variables,'+','−','×','÷','(',')'].includes(t))||!unitChoices.includes(input.unit))throw new Error('Symboles ou unité invalides');equationTokens=[...input.tokens];selectedUnit=input.unit;refreshBuilder();$('#validateBtn').click();return{answered:app.answered,score:app.score,error:$('#builderError').textContent}}});
+      register({name:'submit_equation',title:'Construire une équation',description:'Valide les symboles de la partie droite et son unité dans le mode Équations.',inputSchema:{type:'object',properties:{tokens:{type:'array',items:{type:'string',enum:[...variables,...operators]}},unit:{type:'string',enum:unitChoices}},required:['tokens','unit'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(app.current.kind!=='equation'||app.answered)throw new Error('Aucune équation à compléter');if(!Array.isArray(input.tokens)||!input.tokens.length||input.tokens.length>100||input.tokens.some(t=>![...variables,...operators].includes(t))||!unitChoices.includes(input.unit))throw new Error('Symboles ou unité invalides');equationTokens=[...input.tokens];selectedUnit=input.unit;refreshBuilder();$('#validateBtn').click();return{answered:app.answered,score:app.score,error:$('#builderError').textContent}}});
     }
   </script>
 </body>
