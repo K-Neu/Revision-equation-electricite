@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#071321">
-  <meta name="description" content="QCM mobile pour réviser les calculs et les équations d’électricité.">
+  <meta name="description" content="QCM mobile pour réviser les calculs et les équations d’électricité, dont la loi de Pouillet.">
   <title>Atelier Électricité</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23071321'/%3E%3Cpath d='M37 7 16 36h15l-4 21 21-30H34z' fill='%23ffd44d'/%3E%3C/svg%3E">
@@ -52,7 +52,7 @@
     .summary{display:none;text-align:center}.summary.show{display:block}.summary .gauge{width:112px;height:112px;margin:8px auto 20px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--cyan) var(--score-angle),#17344b 0);position:relative}.summary .gauge:after{content:"";position:absolute;inset:9px;border-radius:50%;background:#0d2235}.summary .gauge strong{position:relative;z-index:1;font-size:1.55rem}.summary h2{font-size:1.55rem;margin:0 0 8px}.summary p{color:var(--muted);line-height:1.5;margin:0 0 20px}.summary button{width:100%;min-height:54px;border:0;border-radius:14px;background:var(--cyan);color:#06202b;font-weight:900;cursor:pointer}
     .install{display:none;border:1px solid #31516a;background:#0b2032;color:var(--muted);padding:8px 11px;border-radius:10px;font-size:.76rem;cursor:pointer}.install.show{display:block}
     .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    @media (min-width:700px){.app{padding-top:32px}.tabs{grid-template-columns:repeat(5,1fr)}.formula-mode{grid-column:auto}.card{padding:28px}.question{margin-top:30px}.answer{min-height:60px}}
+    @media (min-width:700px){.app{padding-top:32px}.tabs{grid-template-columns:repeat(6,1fr)}.formula-mode{grid-column:auto}.card{padding:28px}.question{margin-top:30px}.answer{min-height:60px}}
     @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
@@ -68,6 +68,7 @@
       <button data-mode="ohm" aria-selected="false">Loi d’Ohm</button>
       <button data-mode="charge" aria-selected="false">Charge</button>
       <button data-mode="power" aria-selected="false">Puissance</button>
+      <button data-mode="pouillet" aria-selected="false">Pouillet</button>
       <button data-mode="mix" aria-selected="true">Mélangé</button>
       <button class="formula-mode" data-mode="formulas" aria-selected="false">Équations</button>
     </nav>
@@ -94,7 +95,7 @@
       </section>
     </main>
 
-    <aside class="formula-bar" aria-label="Aide-mémoire des formules"><span>U = R × I</span><span>R = U ÷ I</span><span>I = U ÷ R</span><span>Q = I × T</span><span>P = U × I</span></aside>
+    <aside class="formula-bar" aria-label="Aide-mémoire des formules"><span>U = R × I</span><span>R = U ÷ I</span><span>I = U ÷ R</span><span>Q = I × T</span><span>P = U × I</span><span>R = ρ × L ÷ S</span></aside>
   </div>
 
   <script>
@@ -103,6 +104,7 @@
     const pick = a => a[Math.floor(Math.random()*a.length)];
     const shuffle = a => [...a].sort(()=>Math.random()-.5);
     const fmt = n => Number(n.toFixed(4)).toLocaleString('fr-BE',{maximumFractionDigits:4});
+    const fmtPrecise = n => Number(n.toFixed(6)).toLocaleString('fr-BE',{maximumFractionDigits:6});
 
     function niceDistractors(answer){
       const candidates=[answer*10,answer/10,answer*2,answer/2,answer*5,answer/5,answer+1,Math.max(.001,answer-1)];
@@ -123,7 +125,11 @@
       {question:'Quelle équation calcule la tension U à partir de P et I ?',answer:'U = P ÷ I',wrong:['U = P × I','U = I ÷ P','U = P + I'],family:'Puissance'},
       {question:'Quelle équation calcule la charge Q à partir de I et T ?',answer:'Q = I × T',wrong:['Q = I ÷ T','Q = T ÷ I','Q = I + T'],family:'Charge électrique'},
       {question:'Quelle équation calcule l’intensité I à partir de Q et T ?',answer:'I = Q ÷ T',wrong:['I = Q × T','I = T ÷ Q','I = Q + T'],family:'Charge électrique'},
-      {question:'Quelle équation calcule la durée T à partir de Q et I ?',answer:'T = Q ÷ I',wrong:['T = Q × I','T = I ÷ Q','T = Q + I'],family:'Charge électrique'}
+      {question:'Quelle équation calcule la durée T à partir de Q et I ?',answer:'T = Q ÷ I',wrong:['T = Q × I','T = I ÷ Q','T = Q + I'],family:'Charge électrique'},
+      {question:'Quelle équation calcule la résistance R à partir de ρ, L et S ?',answer:'R = ρ × L ÷ S',wrong:['R = ρ × S ÷ L','R = L × S ÷ ρ','R = ρ × L × S'],family:'Loi de Pouillet'},
+      {question:'Quelle équation calcule la résistivité ρ à partir de R, L et S ?',answer:'ρ = R × S ÷ L',wrong:['ρ = R × L ÷ S','ρ = L × S ÷ R','ρ = R × L × S'],family:'Loi de Pouillet'},
+      {question:'Quelle équation calcule la longueur L à partir de R, ρ et S ?',answer:'L = R × S ÷ ρ',wrong:['L = R × ρ ÷ S','L = ρ × S ÷ R','L = R × ρ × S'],family:'Loi de Pouillet'},
+      {question:'Quelle équation calcule la section S à partir de ρ, L et R ?',answer:'S = ρ × L ÷ R',wrong:['S = ρ × R ÷ L','S = L × R ÷ ρ','S = ρ × L × R'],family:'Loi de Pouillet'}
     ];
     function equationQuestion(){
       const item=pick(equationBank);
@@ -164,10 +170,22 @@
       return {topic:'Puissance électrique',formula:'I = P ÷ U',question:'Quelle est l’intensité I ?',given:[['Puissance P',`${fmt(p)} W`],['Tension U',`${fmt(u)} V`]],answer:i,unit:'A',calc:`I = ${fmt(p)} ÷ ${fmt(u)} = ${fmt(i)} A`};
     }
 
+    function pouilletQuestion(){
+      const type=pick(['r','rho','l','s']);
+      const material=pick([{name:'Cuivre',rho:.0175},{name:'Aluminium',rho:.0282}]);
+      const l=pick([10,20,25,40,50,80,100]);
+      const s=pick([1.5,2.5,4,6,10,16]);
+      const r=Number((material.rho*l/s).toFixed(6));
+      if(type==='r') return {topic:'Loi de Pouillet · '+material.name,formula:'R = ρ × L ÷ S',question:'Quelle est la résistance R du conducteur ?',given:[['Résistivité ρ',`${fmtPrecise(material.rho)} Ω·mm²/m`],['Longueur L',`${fmt(l)} m`],['Section S',`${fmt(s)} mm²`]],answer:r,unit:'Ω',calc:`R = ${fmtPrecise(material.rho)} × ${fmt(l)} ÷ ${fmt(s)} = ${fmtPrecise(r)} Ω`};
+      if(type==='rho') return {topic:'Loi de Pouillet · '+material.name,formula:'ρ = R × S ÷ L',question:'Quelle est la résistivité ρ du conducteur ?',given:[['Résistance R',`${fmtPrecise(r)} Ω`],['Longueur L',`${fmt(l)} m`],['Section S',`${fmt(s)} mm²`]],answer:material.rho,unit:'Ω·mm²/m',calc:`ρ = ${fmtPrecise(r)} × ${fmt(s)} ÷ ${fmt(l)} = ${fmtPrecise(material.rho)} Ω·mm²/m`};
+      if(type==='l') return {topic:'Loi de Pouillet · '+material.name,formula:'L = R × S ÷ ρ',question:'Quelle est la longueur L du conducteur ?',given:[['Résistance R',`${fmtPrecise(r)} Ω`],['Résistivité ρ',`${fmtPrecise(material.rho)} Ω·mm²/m`],['Section S',`${fmt(s)} mm²`]],answer:l,unit:'m',calc:`L = ${fmtPrecise(r)} × ${fmt(s)} ÷ ${fmtPrecise(material.rho)} = ${fmt(l)} m`};
+      return {topic:'Loi de Pouillet · '+material.name,formula:'S = ρ × L ÷ R',question:'Quelle est la section S du conducteur ?',given:[['Résistivité ρ',`${fmtPrecise(material.rho)} Ω·mm²/m`],['Longueur L',`${fmt(l)} m`],['Résistance R',`${fmtPrecise(r)} Ω`]],answer:s,unit:'mm²',calc:`S = ${fmtPrecise(material.rho)} × ${fmt(l)} ÷ ${fmtPrecise(r)} = ${fmt(s)} mm²`};
+    }
+
     function newQuestion(){
       app.answered=false;
-      const mode=app.mode==='mix'?pick(['ohm','charge','power']):app.mode;
-      const q=mode==='ohm'?ohmQuestion():mode==='charge'?chargeQuestion():mode==='power'?powerQuestion():equationQuestion();
+      const mode=app.mode==='mix'?pick(['ohm','charge','power','pouillet']):app.mode;
+      const q=mode==='ohm'?ohmQuestion():mode==='charge'?chargeQuestion():mode==='power'?powerQuestion():mode==='pouillet'?pouilletQuestion():equationQuestion();
       if(!q.options)q.options=makeOptions(q.answer,q.unit); app.current=q;
       $('#topic').textContent=q.topic; $('#formula').textContent=q.formula; $('#questionText').textContent=q.question;
       $('#given').innerHTML=q.given.map(([label,value])=>`<div class="meter"><span>${label}</span><strong>${value}</strong></div>`).join('');
@@ -210,7 +228,7 @@
       const toolLife=new AbortController();
       const register=tool=>Promise.resolve(document.modelContext.registerTool(tool,{signal:toolLife.signal})).catch(()=>{});
       register({name:'read_current_question',title:'Lire la question',description:'Retourne la question de calcul électrique actuellement affichée et ses réponses proposées.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute:()=>({question:app.current.question,given:app.current.given,options:app.current.options.map(o=>o.label),questionNumber:app.index+1,total:app.total})});
-      register({name:'start_quiz_series',title:'Démarrer une série',description:'Démarre une nouvelle série de dix questions dans le thème choisi.',inputSchema:{type:'object',properties:{mode:{type:'string',enum:['ohm','charge','power','mix','formulas']}},required:['mode'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(!['ohm','charge','power','mix','formulas'].includes(input?.mode))throw new Error('Mode invalide');document.querySelector(`[data-mode="${input.mode}"]`).click();return{status:'started',mode:input.mode,total:app.total}}});
+      register({name:'start_quiz_series',title:'Démarrer une série',description:'Démarre une nouvelle série de dix questions dans le thème choisi.',inputSchema:{type:'object',properties:{mode:{type:'string',enum:['ohm','charge','power','pouillet','mix','formulas']}},required:['mode'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(!['ohm','charge','power','pouillet','mix','formulas'].includes(input?.mode))throw new Error('Mode invalide');document.querySelector(`[data-mode="${input.mode}"]`).click();return{status:'started',mode:input.mode,total:app.total}}});
       register({name:'answer_current_question',title:'Répondre à la question',description:'Sélectionne l’une des quatre réponses de la question actuellement affichée.',inputSchema:{type:'object',properties:{option:{type:'integer',minimum:1,maximum:4}},required:['option'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(!Number.isInteger(input?.option)||input.option<1||input.option>4)throw new Error('L’option doit être comprise entre 1 et 4');if(app.answered)throw new Error('Cette question a déjà reçu une réponse');const button=document.querySelectorAll('.answer')[input.option-1];const correct=button.dataset.correct==='true';button.click();return{correct,score:app.score,calculation:app.current.calc}}});
     }
   </script>
