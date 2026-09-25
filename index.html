@@ -116,9 +116,10 @@
         <p id="summaryText"></p>
         <p class="breakdown" id="scoreBreakdown"></p>
         <div class="result-actions">
-          <button class="export-btn" id="exportBtn">Télécharger le résultat (.txt)</button>
-          <a class="whatsapp" id="whatsappLink" target="_blank" rel="noopener noreferrer">Partager sur WhatsApp</a>
+          <button class="export-btn" id="exportBtn">Télécharger le résultat (PDF)</button>
+          <button class="whatsapp" id="sharePdfBtn">Partager le PDF · WhatsApp</button>
         </div>
+        <p id="shareStatus" role="status" aria-live="polite">Choisis WhatsApp dans le menu de partage du téléphone.</p>
         <button id="restartBtn">Recommencer une série</button>
       </section>
     </main>
@@ -126,11 +127,13 @@
     <aside class="formula-bar" aria-label="Aide-mémoire des formules"><span>U = R × I</span><span>R = U ÷ I</span><span>I = U ÷ R</span><span>Q = I × T</span><span>P = U × I</span><span>R = ρ × L ÷ S</span></aside>
   </div>
 
+  <script src="pdf-fonts.js"></script>
+  <script src="pdf-report.js"></script>
   <script>
     const $ = s => document.querySelector(s);
-    const app = { mode:'mix', index:0, score:0, answered:false, total:10, current:null, showHelp:localStorage.getItem('electricite-help')!=='false', helpUsed:false, completed:false, formulaCorrect:0, unitCorrect:0, numericCorrect:0, result:null };
+    const app = { mode:'mix', index:0, score:0, answered:false, total:10, current:null, showHelp:localStorage.getItem('electricite-help')!=='false', helpUsed:false, completed:false, formulaCorrect:0, unitCorrect:0, numericCorrect:0, result:null, history:[], equationDeck:[] };
     const pick = a => a[Math.floor(Math.random()*a.length)];
-    const shuffle = a => [...a].sort(()=>Math.random()-.5);
+    const shuffle = a => {const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
     const fmt = n => Number(n.toFixed(4)).toLocaleString('fr-BE',{maximumFractionDigits:4});
     const fmtPrecise = n => Number(n.toFixed(6)).toLocaleString('fr-BE',{maximumFractionDigits:6});
     const modeNames={ohm:'Loi d’Ohm',charge:'Charge électrique',power:'Puissance',pouillet:'Loi de Pouillet',section:'Section ronde',series:'Résistances en série',mix:'Calculs mélangés',formulas:'Équations'};
@@ -181,7 +184,8 @@
       {question:'En série, quelle équation retrouve R₁ à partir du total Rₜ et de R₂ ?',answer:'R₁ = Rₜ − R₂',family:'Résistances en série'}
     );
     function equationQuestion(){
-      const item=pick(equationBank);
+      if(!app.equationDeck.length)app.equationDeck=shuffle(equationBank);
+      const item=app.equationDeck.pop();
       const target=item.answer.split(' = ')[0];
       const units={I:'A',U:'V',R:'Ω',P:'W',Q:'C',T:'s',ρ:'Ω·mm²/m',L:'m',S:'mm²',r:'mm',d:'mm','Rₜ':'Ω','R₁':'Ω','R₂':'Ω','R₃':'Ω'};
       const hours=item.family==='Charge électrique'&&Math.random()<.5;
@@ -236,6 +240,7 @@
       const unitCorrect=selectedUnit===app.current.unit,correct=formulaCorrect&&unitCorrect;
       const earned=(formulaCorrect ? .5 : 0)+(unitCorrect ? .5 : 0);
       app.answered=true;app.score+=earned;app.formulaCorrect+=Number(formulaCorrect);app.unitCorrect+=Number(unitCorrect);updateScore();
+      recordResponse(`${app.current.target} = ${equationTokens.join(' ')} ; unité : ${selectedUnit}`,earned,`Équation ${formulaCorrect?'correcte':'incorrecte'} ; unité ${unitCorrect?'correcte':'incorrecte'}.`);
       document.querySelectorAll('#builder button').forEach(b=>b.disabled=true);
       const f=$('#feedback');f.className=`feedback show ${correct?'ok':'no'}`;
       f.innerHTML=`<strong>${correct?'Bonne réponse !':'Pas tout à fait.'} +${fmt(earned)} pt avant réduction éventuelle</strong><div>Équation : ${formulaCorrect?'correcte ✓ (+0,5)':'incorrecte × (+0)'} · Unité : ${unitCorrect?'correcte ✓ (+0,5)':'incorrecte × (+0)'}</div><span class="calculation">${app.current.calc}</span>`;
@@ -325,17 +330,22 @@
       $('#answers').hidden=q.kind==='equation';$('#builder').hidden=q.kind!=='equation';if(q.kind==='equation')setupBuilder();
       $('#topic').textContent=q.topic; $('#formula').textContent=q.formula; $('#questionText').textContent=q.question;
       $('#given').innerHTML=q.given.map(([label,value])=>`<div class="meter"><span>${label}</span><strong>${value}</strong></div>`).join('');
-      $('#answers').innerHTML=q.options.map((o,n)=>`<button class="answer" data-correct="${o.correct}"><span class="letter">${String.fromCharCode(65+n)}</span>${o.label}</button>`).join('');
+      $('#answers').innerHTML=q.options.map((o,n)=>`<button class="answer" data-option="${n}" data-correct="${o.correct}"><span class="letter">${String.fromCharCode(65+n)}</span>${o.label}</button>`).join('');
       document.querySelectorAll('.answer').forEach(b=>b.addEventListener('click',answer));
       $('#feedback').className='feedback'; $('#feedback').innerHTML=''; $('#nextBtn').className='next';
       $('#counter').textContent=`Question ${app.index+1} / ${app.total}`;
       const p=(app.index+1)/app.total*100; $('#progressFill').style.width=`${p}%`; $('.progress').setAttribute('aria-valuenow',app.index+1);
     }
 
+    function recordResponse(response,earned,evaluation){
+      const q=app.current;
+      app.history.push({question:q.question,given:q.given.map(pair=>[...pair]),context:q.unitContext||'',response,correction:q.calc,earned,evaluation});
+    }
     function answer(e){
       if(app.answered)return; app.answered=true;
       const correct=e.currentTarget.dataset.correct==='true';
       if(correct){app.score++;app.numericCorrect++}
+      recordResponse(app.current.options[Number(e.currentTarget.dataset.option)].label,correct?1:0,correct?'Réponse correcte.':'Réponse incorrecte.');
       updateScore();
       document.querySelectorAll('.answer').forEach(b=>{b.disabled=true;const isCorrect=b.dataset.correct==='true';if(isCorrect){b.classList.add('correct');b.insertAdjacentHTML('beforeend','<span class="mark">✓</span>')}else if(b===e.currentTarget){b.classList.add('wrong');b.insertAdjacentHTML('beforeend','<span class="mark">×</span>')}});
       const f=$('#feedback');f.className=`feedback show ${correct?'ok':'no'}`;f.innerHTML=`<strong>${correct?'Bonne réponse !':'Pas tout à fait.'}</strong><span class="calculation">${app.current.calc}</span>`;
@@ -354,17 +364,36 @@
       const breakdown=`${detail}\nTotal brut : ${fmt(app.score)} / ${app.total}\n${app.helpUsed?'Aides utilisées : total ÷ 2':'Sans aide : aucune réduction'}\nScore final : ${fmt(points)} / ${app.total}`;
       $('#scoreBreakdown').textContent=breakdown;
       const completedAt=new Date();
-      const text=`Atelier Électricité — Résultat\n${completedAt.toLocaleString('fr-BE')}\nMode : ${modeNames[app.mode]}\n${app.total} questions\n\n${breakdown}\n\nBarème : ${app.mode==='formulas'?'0,5 point par équation correcte et 0,5 point par unité correcte.':'1 point par bonne réponse.'}\nSi les aides ont été affichées pendant la série, le total est divisé par 2.`;
-      app.result=Object.freeze({text,filename:`resultat-electricite-${completedAt.toISOString().replace(/[:.]/g,'-')}.txt`,points});
-      $('#whatsappLink').href='https://wa.me/?text='+encodeURIComponent(text);
+      const report={date:completedAt.toLocaleString('fr-BE'),mode:modeNames[app.mode],breakdown,rule:app.mode==='formulas'?'0,5 point par équation correcte et 0,5 point par unité correcte.':'1 point par bonne réponse.',answers:app.history.map(answer=>({...answer}))};
+      const filename=`resultat-electricite-${completedAt.toISOString().replace(/[:.]/g,'-')}.pdf`;
+      const blob=new Blob([createQuizPdf(report)],{type:'application/pdf'});
+      const file=typeof File==='function'?new File([blob],filename,{type:'application/pdf'}):null;
+      app.result=Object.freeze({report,filename,blob,file,points});
+      $('#shareStatus').textContent='Choisis WhatsApp dans le menu de partage du téléphone.';
       const best=Math.max(points,Number(localStorage.getItem('electricite-best-v2')||0));localStorage.setItem('electricite-best-v2',best);
     }
-    function restart(){app.index=0;app.score=0;app.helpUsed=false;app.completed=false;app.formulaCorrect=0;app.unitCorrect=0;app.numericCorrect=0;app.result=null;$('#whatsappLink').removeAttribute('href');$('#summary').classList.remove('show');$('#quizCard').style.display='block';newQuestion()}
+    function restart(){app.index=0;app.score=0;app.helpUsed=false;app.completed=false;app.formulaCorrect=0;app.unitCorrect=0;app.numericCorrect=0;app.result=null;app.history=[];app.equationDeck=[];$('#summary').classList.remove('show');$('#quizCard').style.display='block';newQuestion()}
     function setHelp(enabled){app.showHelp=enabled;if(enabled&&app.current&&!app.completed)app.helpUsed=true;document.body.classList.toggle('help-off',!enabled);$('#helpToggle').checked=enabled;localStorage.setItem('electricite-help',String(enabled));updateScore()}
-    $('#exportBtn').addEventListener('click',()=>{
+    function downloadResult(){
       if(!app.result)return;
-      const url=URL.createObjectURL(new Blob(['\uFEFF',app.result.text],{type:'text/plain;charset=utf-8'}));
+      const url=URL.createObjectURL(app.result.blob);
       const link=document.createElement('a');link.href=url;link.download=app.result.filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+    $('#exportBtn').addEventListener('click',downloadResult);
+    $('#sharePdfBtn').addEventListener('click',async()=>{
+      if(!app.result)return;
+      const file=app.result.file;
+      try{
+        if(file&&navigator.share&&navigator.canShare?.({files:[file]})){
+          await navigator.share({files:[file],title:'Résultat - Atelier Électricité'});
+          $('#shareStatus').textContent='Le PDF a été transmis au menu de partage.';
+        }else{
+          downloadResult();
+          $('#shareStatus').textContent='Le partage de fichiers n’est pas disponible ici. Le PDF est téléchargé : joins-le comme document dans WhatsApp.';
+        }
+      }catch(error){
+        $('#shareStatus').textContent=error.name==='AbortError'?'Partage annulé. Le PDF reste disponible.':'Le partage n’a pas abouti. Télécharge le PDF puis joins-le comme document dans WhatsApp.';
+      }
     });
     $('#nextBtn').addEventListener('click',()=>{app.index++;app.index>=app.total?finish():newQuestion()});
     $('#restartBtn').addEventListener('click',restart);
