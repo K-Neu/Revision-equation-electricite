@@ -7,6 +7,7 @@ Application web mobile pour réviser les calculs et les équations d’électric
 - Loi d’Ohm
 - Charge électrique
 - Puissance électrique
+- Loi de Pouillet : résistance, résistivité, longueur et section
 - Mode équations
 - Affichage facultatif des aides
 - Installation sur mobile et fonctionnement hors connexion
