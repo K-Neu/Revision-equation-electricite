@@ -16,6 +16,18 @@ Application web responsive de révision des calculs, équations et unités élec
 - Loi de Pouillet : résistance, résistivité, longueur et section
 - Section ronde : rayon, diamètre et surface
 - Résistances en série : total et résistance inconnue
+- Résistances en parallèle : équivalente de deux ou trois résistances, et recherche d’une résistance inconnue
+- Circuits mixtes : associations série/parallèle et valeurs manquantes, dans un énoncé unique avec schéma et résolution en cascade
+
+## Circuits mixtes en cascade
+
+En **Calculs appliqués**, chaque exercice présente un seul circuit entre A et B, avec une résistance inconnue à retrouver à partir de sa tension et de son courant, ou de sa tension et de sa puissance. Trois ou quatre étapes se suivent : retrouver la résistance, réduire une première association, réutiliser ce résultat dans l’association suivante, jusqu’à **Req**.
+
+Quatre montages sont proposés : `(R₁ ∥ R₂) + R₃`, `(R₁ + R₂) ∥ R₃`, `((R₁ + R₂) ∥ R₃) + R₄` et `((R₁ ∥ R₂) + R₃) ∥ R₄`. Le symbole `∥` désigne une association en parallèle.
+
+Chaque résultat est corrigé avant de poursuivre. La valeur corrigée, arrondie à quatre décimales, est explicitement reprise à l’étape suivante ; une erreur initiale ne bloque donc pas le reste du raisonnement. Un exercice vaut un point, réparti à parts égales entre ses étapes. Les réponses et corrections de toutes les étapes figurent dans le PDF.
+
+En **Équations & unités**, les nouveaux thèmes proposent les relations de réduction globales, y compris la recherche d’une résistance en parallèle. Les écritures `R4`, `R₄`, `Req` et `Rt` sont acceptées.
 
 ## Réponses et notation
 

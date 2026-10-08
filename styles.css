@@ -790,6 +790,9 @@ label:has(input:checked) .choice-check {
   grid-template-columns: minmax(0, 1fr) 240px;
   gap: 32px;
 }
+.quiz-layout > * {
+  min-width: 0;
+}
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -982,6 +985,146 @@ label:has(input:checked) .choice-check {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 12px;
   margin-top: 8px;
+  white-space: pre-line;
+}
+.circuit-diagram {
+  margin: 0 0 24px;
+  padding: 10px 10px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7f9f6;
+  min-width: 0;
+}
+.diagram-scroll {
+  overflow-x: auto;
+  color: var(--accent);
+  scrollbar-width: thin;
+}
+.diagram-scroll svg {
+  display: block;
+  width: 100%;
+  min-width: 420px;
+}
+.circuit-label {
+  fill: var(--ink);
+  font:
+    14px ui-monospace,
+    Consolas,
+    monospace;
+}
+.circuit-value {
+  fill: var(--muted);
+  font:
+    12px ui-monospace,
+    Consolas,
+    monospace;
+}
+.circuit-diagram > .field-hint {
+  margin: 8px 7px 12px;
+}
+.diagram-mobile-hint {
+  display: none;
+}
+@media (max-width: 600px) {
+  .diagram-mobile-hint {
+    display: block;
+    margin-top: 5px;
+    color: var(--accent);
+  }
+}
+.cascade-panel {
+  border-top: 1px solid var(--line);
+  padding-top: 22px;
+  margin: 24px 0;
+}
+.cascade-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.cascade-heading .eyebrow {
+  margin: 0;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.cascade-heading > span:last-child {
+  color: var(--muted);
+  font-size: 10px;
+}
+.cascade-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.cascade-step {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+.cascade-step > div {
+  min-width: 0;
+}
+.cascade-step.current {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.cascade-step.locked {
+  background: #f7f8f6;
+  color: var(--muted);
+}
+.cascade-step strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.65;
+}
+.cascade-step p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.cascade-number {
+  flex: 0 0 24px;
+  font:
+    11px ui-monospace,
+    Consolas,
+    monospace;
+  color: var(--accent);
+  line-height: 2;
+}
+.cascade-step .step-result.ok {
+  color: var(--accent);
+}
+.cascade-step .step-result.no {
+  color: var(--red);
+}
+.cascade-step .step-reuse {
+  color: var(--ink);
+}
+.step-context {
+  padding: 10px 13px;
+  background: var(--accent-soft);
+  border-radius: 6px;
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .next {
   margin-top: 17px;

@@ -70,7 +70,7 @@
                 10 questions par série. Un bilan pour avancer.
               </p>
               <div class="hero-stats" aria-label="Contenu disponible">
-                <div><strong>06</strong><span>thèmes essentiels</span></div>
+                <div><strong>08</strong><span>thèmes essentiels</span></div>
                 <div><strong>02</strong><span>formats d’exercice</span></div>
                 <div><strong>100 %</strong><span>réponses à saisir</span></div>
               </div>
@@ -292,6 +292,29 @@
                       ><small>Résistance totale et inconnues</small></span
                     ><span class="choice-check" aria-hidden="true"></span
                   ></label>
+                  <label class="theme-card"
+                    ><input
+                      type="radio"
+                      name="quizTheme"
+                      value="parallel" /><span
+                      class="theme-symbol"
+                      aria-hidden="true"
+                      >∥</span
+                    ><span
+                      ><strong>Résistances en parallèle</strong
+                      ><small>Équivalente et résistances inconnues</small></span
+                    ><span class="choice-check" aria-hidden="true"></span
+                  ></label>
+                  <label class="theme-card"
+                    ><input type="radio" name="quizTheme" value="mixed" /><span
+                      class="theme-symbol"
+                      aria-hidden="true"
+                      >Req</span
+                    ><span
+                      ><strong>Circuits mixtes</strong
+                      ><small>Associations série et parallèle</small></span
+                    ><span class="choice-check" aria-hidden="true"></span
+                  ></label>
                 </div>
               </fieldset>
             </div>
@@ -385,13 +408,52 @@
                   >
                 </div>
                 <h2 class="question" id="questionText" tabindex="-1"></h2>
+                <div id="circuitDiagram" class="circuit-diagram" hidden>
+                  <div
+                    class="diagram-scroll"
+                    tabindex="0"
+                    role="region"
+                    aria-label="Schéma du circuit, défilement horizontal si nécessaire"
+                    id="diagramScroll"
+                  ></div>
+                  <p class="field-hint">
+                    La résistance marquée « ? » est à retrouver à partir des
+                    données.
+                    <span class="diagram-mobile-hint"
+                      >Faites glisser le schéma horizontalement pour voir tout
+                      le circuit.</span
+                    >
+                  </p>
+                </div>
                 <div class="given" id="given"></div>
                 <p class="unit-context" id="unitContext" hidden></p>
+                <div id="cascadePanel" class="cascade-panel" hidden>
+                  <div class="cascade-heading">
+                    <span class="eyebrow">RÉSOLUTION EN CASCADE</span
+                    ><span id="cascadeCounter"></span>
+                  </div>
+                  <p class="field-hint">
+                    Une seule question. Chaque résultat corrigé est repris à
+                    l’étape suivante, arrondi à 4 décimales. Les points sont
+                    répartis entre les étapes.
+                  </p>
+                  <ol id="cascadeSteps" class="cascade-steps"></ol>
+                  <p
+                    id="cascadeStatus"
+                    class="sr-only"
+                    role="status"
+                    aria-live="polite"
+                  ></p>
+                </div>
                 <form id="answerForm" novalidate>
                   <div id="numericAnswer">
-                    <label class="field-label" for="numericInput"
+                    <label
+                      id="numericLabel"
+                      class="field-label"
+                      for="numericInput"
                       >Votre résultat</label
                     >
+                    <p id="stepContext" class="step-context" hidden></p>
                     <div class="input-with-unit">
                       <input
                         id="numericInput"
@@ -569,6 +631,7 @@
     </dialog>
     <script src="pdf-fonts.js"></script>
     <script src="pdf-report.js"></script>
+    <script src="circuits.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

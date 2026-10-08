@@ -110,6 +110,14 @@ async function calculateDisplayedQuestion(page, theme) {
       ? 2 * Math.sqrt(find("S") / Math.PI)
       : 2 * find("r");
   }
+  if (theme === "parallel") {
+    const reciprocalSum = Object.entries(given)
+      .filter(([label]) => label !== "Req")
+      .reduce((sum, [, value]) => sum + 1 / value, 0);
+    return Object.hasOwn(given, "Req")
+      ? 1 / (1 / given.Req - reciprocalSum)
+      : 1 / reciprocalSum;
+  }
   if (target === "Rₜ")
     return Object.values(given).reduce((sum, value) => sum + value, 0);
   return (
@@ -122,6 +130,53 @@ async function calculateDisplayedQuestion(page, theme) {
 async function submitNumeric(page, value) {
   await page.locator("#numericInput").fill(value);
   await page.locator("#numericInput").press("Enter");
+}
+async function calculateMixedSteps(page) {
+  const data = await page.evaluate(() => ({
+    variant: app.current.variant,
+    given: app.current.given,
+  }));
+  const values = Object.fromEntries(
+    data.given
+      .filter(([, value]) => value !== "à déterminer")
+      .map(([label, value]) => [
+        label,
+        Number(
+          value
+            .match(/^[\d,.\s]+/)[0]
+            .replace(/\s/g, "")
+            .replace(",", "."),
+        ),
+      ]),
+  );
+  const round = (value) => Number(value.toFixed(4));
+  const parallel = (a, b) => (a * b) / (a + b);
+  const missing = values["Tension U₁"] !== undefined ? "R₁" : "R₂";
+  const recovered = round(
+    missing === "R₁"
+      ? values["Tension U₁"] / values["Intensité I₁"]
+      : values["Puissance P₂"] !== undefined
+        ? values["Tension U₂"] ** 2 / values["Puissance P₂"]
+        : values["Tension U₂"] / values["Intensité I₂"],
+  );
+  values[missing] = recovered;
+  const { "R₁": r1, "R₂": r2, "R₃": r3, "R₄": r4 } = values;
+  const results = [recovered];
+  if (
+    data.variant === "parallel-series" ||
+    data.variant === "parallel-series-parallel"
+  ) {
+    results.push(round(parallel(r1, r2)));
+    results.push(round(results[1] + r3));
+    if (data.variant === "parallel-series-parallel")
+      results.push(round(parallel(results[2], r4)));
+  } else {
+    results.push(round(r1 + r2));
+    results.push(round(parallel(results[1], r3)));
+    if (data.variant === "series-parallel-series")
+      results.push(round(results[2] + r4));
+  }
+  return results;
 }
 let base, browser;
 (async () => {
@@ -146,7 +201,7 @@ let base, browser;
   await page.locator(".hero-cta").click();
   assert.equal(await page.locator("#setupScreen").isVisible(), true);
   assert.equal(await page.locator("#setupHelpToggle").isChecked(), false);
-  assert.equal(await page.locator('input[name="quizTheme"]').count(), 7);
+  assert.equal(await page.locator('input[name="quizTheme"]').count(), 9);
   pass("Home, questionnaire menu and aids disabled by default");
 
   for (const theme of [
@@ -156,6 +211,7 @@ let base, browser;
     "pouillet",
     "section",
     "series",
+    "parallel",
   ]) {
     await start(page, "numeric", theme);
     for (let index = 0; index < 10; index++) {
@@ -178,7 +234,7 @@ let base, browser;
     assert.equal(await page.locator("#finalScore").textContent(), "10 / 10");
   }
   pass(
-    "All six calculation themes: displayed values, rounding, Enter and 10/10 scores",
+    "All seven single-result calculation themes: displayed values, rounding, Enter and 10/10 scores",
   );
 
   await start(page, "numeric", "ohm");
@@ -321,6 +377,7 @@ let base, browser;
       .replace(/R₁/g, "R1")
       .replace(/R₂/g, "R2")
       .replace(/R₃/g, "R3")
+      .replace(/R₄/g, "R4")
       .replace(/−/g, "-");
   for (const theme of [
     "ohm",
@@ -329,6 +386,8 @@ let base, browser;
     "pouillet",
     "section",
     "series",
+    "parallel",
+    "mixed",
   ]) {
     await start(page, "equation", theme);
     for (let index = 0; index < 10; index++) {
@@ -346,6 +405,8 @@ let base, browser;
           pouillet: "Loi de Pouillet",
           section: "Section ronde",
           series: "Résistances en série",
+          parallel: "Résistances en parallèle",
+          mixed: "Circuits mixtes",
         }[theme],
       );
       await page.locator("#equationInput").fill(ascii(question.answer));
@@ -359,7 +420,7 @@ let base, browser;
     assert.equal(await page.locator("#finalScore").textContent(), "10 / 10");
   }
   pass(
-    "All six equation themes, full equations, manual units and 10/10 scores",
+    "All eight equation themes, full equations, manual units and 10/10 scores",
   );
 
   const downloadPromise = page.waitForEvent("download");
@@ -379,6 +440,149 @@ let base, browser;
   await page.reload();
   assert.equal(await page.locator("#lastResult").isVisible(), true);
   pass("Detailed downloadable PDF and saved last result");
+
+  for (const variant of [
+    "parallel-series",
+    "series-parallel",
+    "series-parallel-series",
+    "parallel-series-parallel",
+  ]) {
+    await start(page, "numeric", "mixed");
+    await page.evaluate((variant) => {
+      const original = Math.random;
+      Math.random = () =>
+        [
+          "parallel-series",
+          "series-parallel",
+          "series-parallel-series",
+          "parallel-series-parallel",
+        ].indexOf(variant) /
+          4 +
+        0.01;
+      try {
+        newQuestion();
+      } finally {
+        Math.random = original;
+      }
+    }, variant);
+    assert.equal(await page.evaluate(() => app.current.variant), variant);
+    assert.equal(await page.locator("#circuitDiagram svg").count(), 1);
+    assert.equal(
+      await page
+        .locator("#given")
+        .textContent()
+        .then((text) => text.includes("à déterminer")),
+      true,
+    );
+    const results = await calculateMixedSteps(page);
+    assert.equal(
+      await page.locator("#cascadeSteps li").count(),
+      results.length,
+    );
+    await submitNumeric(page, "");
+    assert.equal(await page.evaluate(() => app.stepIndex), 0);
+    // A wrong first step is corrected and its canonical value feeds every later step.
+    for (let index = 0; index < results.length; index++) {
+      await submitNumeric(page, index === 0 ? "0" : String(results[index]));
+      assert.equal(
+        await page.evaluate(() => app.index),
+        0,
+        "Cascade must stay in one question",
+      );
+      assert.equal(await page.evaluate(() => app.stepIndex), index + 1);
+      if (index < results.length - 1) {
+        assert.equal(await page.evaluate(() => app.answered), false);
+        assert.equal(await page.locator("#nextBtn").isVisible(), false);
+        assert.equal(await page.evaluate(() => app.history.length), 0);
+        assert.equal(
+          await page
+            .locator("#stepContext")
+            .textContent()
+            .then((text) =>
+              text.includes(
+                results[index].toLocaleString("fr-BE", {
+                  maximumFractionDigits: 4,
+                }),
+              ),
+            ),
+          true,
+        );
+      }
+    }
+    assert.equal(await page.evaluate(() => app.answered), true);
+    assert.ok(
+      Math.abs(
+        (await page.evaluate(() => app.score)) -
+          (results.length - 1) / results.length,
+      ) < 1e-9,
+    );
+    assert.equal(await page.evaluate(() => app.history.length), 1);
+    assert.equal(
+      await page.evaluate(() => app.history[0].steps[0].correct),
+      false,
+    );
+    assert.equal(
+      await page.evaluate(() =>
+        app.history[0].steps.slice(1).every((step) => step.correct),
+      ),
+      true,
+    );
+    await page.evaluate(() => submitAnswer());
+    assert.equal(await page.evaluate(() => app.history.length), 1);
+    for (const width of [360, 768, 1440]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert.equal(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        true,
+        `${variant} overflow at ${width}`,
+      );
+    }
+  }
+  pass(
+    "All four circuit topologies: missing values, one statement, sequential steps, corrected reuse, partial credit and responsive diagrams",
+  );
+
+  await start(page, "numeric", "mixed");
+  let expectedSteps = 0;
+  for (let index = 0; index < 10; index++) {
+    const values = await calculateMixedSteps(page);
+    expectedSteps += values.length;
+    for (const value of values) await submitNumeric(page, String(value));
+    assert.equal(await page.evaluate(() => app.score), index + 1);
+    await page.locator("#nextBtn").click();
+  }
+  assert.equal(await page.locator("#finalScore").textContent(), "10 / 10");
+  const circuitReport = await page.evaluate(() => app.result.report);
+  assert.equal(circuitReport.answers.length, 10);
+  assert.equal(
+    circuitReport.answers.reduce((sum, answer) => sum + answer.steps.length, 0),
+    expectedSteps,
+  );
+  assert.ok(
+    circuitReport.answers.every(
+      (answer) =>
+        answer.context.includes("Entre A") ||
+        answer.context.includes("entre A"),
+    ),
+  );
+  assert.ok(
+    circuitReport.answers.every(
+      (answer) =>
+        answer.response.includes("Req") && answer.correction.includes("Req"),
+    ),
+  );
+  const circuitDownloadPromise = page.waitForEvent("download");
+  await page.locator("#exportBtn").click();
+  const circuitDownload = await circuitDownloadPromise;
+  assert.equal(
+    (await fs.readFile(await circuitDownload.path())).subarray(0, 8).toString(),
+    "%PDF-1.4",
+  );
+  pass(
+    "Complete ten-circuit series, all cascading responses/corrections in report and downloadable PDF",
+  );
 
   for (const width of [360, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 844 });
@@ -421,10 +625,16 @@ let base, browser;
   });
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
   const cached = await page.evaluate(async () => {
-    const cache = await caches.open("atelier-electricite-v10");
+    const cache = await caches.open("atelier-electricite-v11");
     return (await cache.keys()).map((request) => new URL(request.url).pathname);
   });
-  for (const asset of ["app.js", "styles.css", "pdf-fonts.js", "pdf-report.js"])
+  for (const asset of [
+    "app.js",
+    "circuits.js",
+    "styles.css",
+    "pdf-fonts.js",
+    "pdf-report.js",
+  ])
     assert.ok(
       cached.some((url) => url.endsWith(asset)),
       asset + " not cached",
@@ -432,12 +642,16 @@ let base, browser;
   await context.setOffline(true);
   await page.reload();
   await page.locator(".hero-cta").click();
+  await page.locator('input[name="quizTheme"][value="mixed"]').check();
   await page.locator("#startBtn").click();
   if (await page.locator("#equationAnswer").isVisible()) {
     const q = await page.evaluate(() => app.current);
     await page.locator("#equationInput").fill(q.answer);
     await page.locator("#unitInput").fill(q.unit);
     await page.locator("#validateBtn").click();
+  } else if (await page.evaluate(() => app.current.kind === "cascade")) {
+    for (const value of await calculateMixedSteps(page))
+      await submitNumeric(page, String(value));
   } else
     await submitNumeric(
       page,

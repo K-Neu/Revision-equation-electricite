@@ -2,7 +2,7 @@
 function createQuizPdf(report) {
   const pages = [];
   let commands = [], y = 794;
-  const clean = value => String(value).normalize('NFC').replace(/[’‘]/g,"'").replace(/[“”]/g,'"').replace(/[–—−]/g,'-').replace(/→/g,'->').replace(/\u202f|\u00a0/g,' ').replace(/…/g,'...');
+  const clean = value => String(value).normalize('NFC').replace(/[’‘]/g,"'").replace(/[“”]/g,'"').replace(/[–—−]/g,'-').replace(/→/g,'->').replace(/\u202f|\u00a0/g,' ').replace(/…/g,'...').replace(/₄/g,'4');
   const hex = n => n.toString(16).padStart(4,'0');
   function text(value,x,baseline,size=11,bold=false) {
     const font=QUIZ_PDF_FONTS[bold?'bold':'regular'];
@@ -45,7 +45,7 @@ function createQuizPdf(report) {
       'Réponse donnée : '+answer.response,
       'Correction : '+answer.correction,
       answer.evaluation,
-      'Points avant réduction : '+answer.earned.toLocaleString('fr-BE')+' / 1'
+      'Points avant réduction : '+answer.earned.toLocaleString('fr-BE',{maximumFractionDigits:4})+' / 1'
     ];
     const height=rows.reduce((n,row,i)=>n+wrap(row,11,i===0).length*16+4,0)+12;
     if(y-height<55)nextPage();

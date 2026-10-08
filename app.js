@@ -31,6 +31,10 @@ const app = {
   formulaCorrect: 0,
   unitCorrect: 0,
   numericCorrect: 0,
+  stepCorrect: 0,
+  stepTotal: 0,
+  stepIndex: 0,
+  stepResponses: [],
   result: null,
   history: [],
   equationDeck: [],
@@ -60,6 +64,8 @@ const modeNames = {
   pouillet: "Loi de Pouillet",
   section: "Section ronde",
   series: "Résistances en série",
+  parallel: "Résistances en parallèle",
+  mixed: "Circuits mixtes",
   mix: "Tous les thèmes",
   formulas: "Équations & unités",
 };
@@ -70,6 +76,8 @@ const familyNames = {
   pouillet: "Loi de Pouillet",
   section: "Section ronde",
   series: "Résistances en série",
+  parallel: "Résistances en parallèle",
+  mixed: "Circuits mixtes",
 };
 const screenHashes = {
   home: "#accueil",
@@ -89,7 +97,9 @@ function updateScore() {
   const rule =
     app.mode === "formulas"
       ? "Équation : 0,5 pt. Unité : 0,5 pt."
-      : "Bonne réponse : 1 point.";
+      : app.current?.kind === "cascade"
+        ? `Exercice : 1 point réparti entre ${app.current.steps.length} étapes.`
+        : "Bonne réponse : 1 point.";
   $("#scoringNote").textContent =
     rule +
     " " +
@@ -210,6 +220,7 @@ const variables = [
   "R₁",
   "R₂",
   "R₃",
+  "R₄",
 ];
 // Both keyboard notation and the course's mathematical symbols are accepted.
 function tokenizeExpression(value, target) {
@@ -219,8 +230,12 @@ function tokenizeExpression(value, target) {
     .replace(/sqrt/gi, "√")
     .replace(/rho/gi, "ρ")
     .replace(/pi/gi, "π")
+    .replace(/\bR_?eq\b/gi, "Rₜ")
     .replace(/R_?t\b/gi, "Rₜ")
-    .replace(/R_?([123])\b/gi, (_, n) => "R" + { 1: "₁", 2: "₂", 3: "₃" }[n])
+    .replace(
+      /R_?([1234])\b/gi,
+      (_, n) => "R" + { 1: "₁", 2: "₂", 3: "₃", 4: "₄" }[n],
+    )
     .replace(/\*\*/g, "^")
     .replace(/\^\s*2/g, "²")
     .replace(/[*,]/g, (char) => (char === "*" ? "×" : "."))
@@ -236,7 +251,7 @@ function tokenizeExpression(value, target) {
   while (source.trim()) {
     source = source.trimStart();
     const match =
-      /^(R[ₜ₁₂₃]|[UIRPQTρLSrdπ√²()+−×÷]|(?:\d+(?:\.\d*)?|\.\d+))/.exec(source);
+      /^(R[ₜ₁₂₃₄]|[UIRPQTρLSrdπ√²()+−×÷]|(?:\d+(?:\.\d*)?|\.\d+))/.exec(source);
     if (!match)
       throw Error(
         "Utilisez les variables du cours et les opérations indiquées.",
@@ -509,6 +524,54 @@ equationBank.push(
       "En série, quelle équation retrouve R₁ à partir du total Rₜ et de R₂ ?",
     answer: "R₁ = Rₜ − R₂",
     family: "Résistances en série",
+  },
+  {
+    question:
+      "En parallèle, quelle équation calcule la résistance équivalente Rₜ (Req) de R₁ et R₂ ?",
+    answer: "Rₜ = R₁ × R₂ ÷ ( R₁ + R₂ )",
+    family: "Résistances en parallèle",
+  },
+  {
+    question:
+      "En parallèle, quelle équation calcule Rₜ (Req) à partir de R₁, R₂ et R₃ ?",
+    answer: "Rₜ = 1 ÷ ( 1 ÷ R₁ + 1 ÷ R₂ + 1 ÷ R₃ )",
+    family: "Résistances en parallèle",
+  },
+  {
+    question:
+      "R₁ et R₂ sont en parallèle. Quelle équation retrouve R₂ à partir de Rₜ et de R₁ ?",
+    answer: "R₂ = 1 ÷ ( 1 ÷ Rₜ − 1 ÷ R₁ )",
+    family: "Résistances en parallèle",
+  },
+  {
+    question:
+      "R₁, R₂ et R₃ sont en parallèle. Quelle équation retrouve R₃ à partir de Rₜ, R₁ et R₂ ?",
+    answer: "R₃ = 1 ÷ ( 1 ÷ Rₜ − 1 ÷ R₁ − 1 ÷ R₂ )",
+    family: "Résistances en parallèle",
+  },
+  {
+    question:
+      "R₁ et R₂ sont en parallèle, puis en série avec R₃. Écrivez la résistance équivalente Rₜ (Req).",
+    answer: "Rₜ = R₁ × R₂ ÷ ( R₁ + R₂ ) + R₃",
+    family: "Circuits mixtes",
+  },
+  {
+    question:
+      "R₁ et R₂ sont en série. Ce groupe est en parallèle avec R₃. Écrivez Rₜ (Req).",
+    answer: "Rₜ = ( R₁ + R₂ ) × R₃ ÷ ( R₁ + R₂ + R₃ )",
+    family: "Circuits mixtes",
+  },
+  {
+    question:
+      "R₁ et R₂ sont en série, ce groupe est en parallèle avec R₃, puis l’ensemble est en série avec R₄. Écrivez Rₜ (Req).",
+    answer: "Rₜ = 1 ÷ ( 1 ÷ ( R₁ + R₂ ) + 1 ÷ R₃ ) + R₄",
+    family: "Circuits mixtes",
+  },
+  {
+    question:
+      "R₁ et R₂ sont en parallèle, puis en série avec R₃. Cette branche est en parallèle avec R₄. Écrivez Rₜ (Req).",
+    answer: "Rₜ = 1 ÷ ( 1 ÷ ( R₁ × R₂ ÷ ( R₁ + R₂ ) + R₃ ) + 1 ÷ R₄ )",
+    family: "Circuits mixtes",
   },
 );
 
@@ -882,6 +945,7 @@ function equationQuestion() {
     "R₁": "Ω",
     "R₂": "Ω",
     "R₃": "Ω",
+    "R₄": "Ω",
   };
   if (item.family === "Charge électrique" && Math.random() < 0.5) {
     units.Q = "Ah";
@@ -913,7 +977,19 @@ function insertSymbol(symbol) {
   input.focus();
   clearError();
 }
-for (const symbol of ["×", "÷", "²", "√", "π", "ρ", "Rₜ", "R₁", "R₂", "R₃"]) {
+for (const symbol of [
+  "×",
+  "÷",
+  "²",
+  "√",
+  "π",
+  "ρ",
+  "Rₜ",
+  "R₁",
+  "R₂",
+  "R₃",
+  "R₄",
+]) {
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = symbol;
@@ -930,6 +1006,8 @@ for (const id of ["numericInput", "equationInput", "unitInput"])
   $("#" + id).addEventListener("input", clearError);
 function newQuestion(focus = true) {
   app.answered = false;
+  app.stepIndex = 0;
+  app.stepResponses = [];
   if (app.showHelp) app.helpUsed = true;
   updateScore();
   let mode = app.mode;
@@ -945,19 +1023,31 @@ function newQuestion(focus = true) {
     pouillet: pouilletQuestion,
     section: sectionQuestion,
     series: seriesQuestion,
+    parallel: parallelQuestion,
+    mixed: mixedCircuitQuestion,
     formulas: equationQuestion,
   };
   const question = generators[mode]();
   question.precision = mode === "pouillet" ? 6 : 4;
   app.current = question;
+  updateScore();
   const equation = question.kind === "equation";
   $("#numericAnswer").hidden = equation;
   $("#equationAnswer").hidden = !equation;
-  $("#unitContext").hidden = !equation;
+  $("#unitContext").hidden = !equation && question.kind !== "cascade";
   $("#unitContext").textContent = question.unitContext || "";
   $("#topic").textContent = question.topic;
   $("#formula").textContent = question.formula;
   $("#questionText").textContent = question.question;
+  $("#circuitDiagram").hidden = !question.diagram;
+  $("#diagramScroll").replaceChildren(
+    ...(question.diagram ? [renderCircuitDiagram(question.diagram)] : []),
+  );
+  $("#cascadePanel").hidden = question.kind !== "cascade";
+  if (question.kind !== "cascade") $("#cascadeSteps").replaceChildren();
+  $("#cascadeStatus").textContent = "";
+  $("#numericLabel").textContent = "Votre résultat";
+  $("#stepContext").hidden = true;
   $("#given").replaceChildren(
     ...question.given.map(([label, value]) => {
       const meter = document.createElement("div");
@@ -978,8 +1068,11 @@ function newQuestion(focus = true) {
   $("#answerForm")
     .querySelectorAll("input,button")
     .forEach((control) => (control.disabled = false));
+  if (question.kind === "cascade") renderCascade();
   clearError();
   $("#validateBtn").hidden = false;
+  if (question.kind !== "cascade")
+    $("#validateBtn").textContent = "Valider ma réponse →";
   $("#nextBtn").hidden = true;
   $("#feedback").hidden = true;
   $("#feedback").replaceChildren();
@@ -1003,13 +1096,137 @@ function recordResponse(response, earned, evaluation) {
     correction: question.calc,
     earned,
     evaluation,
+    ...(question.kind === "cascade"
+      ? { steps: app.stepResponses.map((step) => ({ ...step })) }
+      : {}),
   });
 }
+function renderCascade() {
+  const question = app.current,
+    done = app.stepIndex >= question.steps.length;
+  $("#cascadeCounter").textContent = done
+    ? "Étapes terminées"
+    : `Étape ${app.stepIndex + 1} / ${question.steps.length}`;
+  $("#cascadeSteps").replaceChildren(
+    ...question.steps.map((step, index) => {
+      const item = document.createElement("li"),
+        result = app.stepResponses[index];
+      item.className =
+        "cascade-step " +
+        (result ? "completed" : index === app.stepIndex ? "current" : "locked");
+      if (index === app.stepIndex) item.setAttribute("aria-current", "step");
+      const number = document.createElement("span");
+      number.className = "cascade-number";
+      number.textContent = String(index + 1).padStart(2, "0");
+      const content = document.createElement("div");
+      const title = document.createElement("strong");
+      title.textContent = `${step.target} · ${step.title}`;
+      content.append(title);
+      const description = document.createElement("p");
+      description.textContent = step.description;
+      content.append(description);
+      if (result) {
+        const status = document.createElement("p");
+        status.className = "step-result " + (result.correct ? "ok" : "no");
+        status.textContent = `${result.correct ? "Correct." : "À reprendre."} Votre réponse : ${result.response}.`;
+        const calculation = document.createElement("span");
+        calculation.className = "calculation";
+        calculation.textContent = step.calc;
+        const reuse = document.createElement("p");
+        reuse.className = "step-reuse";
+        reuse.textContent = `Valeur ${index === question.steps.length - 1 ? "finale" : "reprise pour la suite"} : ${step.target} = ${fmt(step.answer)} Ω.`;
+        content.append(status, calculation, reuse);
+      }
+      item.append(number, content);
+      return item;
+    }),
+  );
+  if (!done) {
+    const step = question.steps[app.stepIndex];
+    $("#numericLabel").textContent =
+      `Votre résultat pour ${step.target} · étape ${app.stepIndex + 1}/${question.steps.length}`;
+    $("#stepContext").hidden = !step.dependsOn.length;
+    $("#stepContext").textContent =
+      "Valeur à reprendre : " +
+      step.dependsOn
+        .map(
+          (index) =>
+            `${question.steps[index].target} = ${fmt(question.steps[index].answer)} Ω`,
+        )
+        .join(" ; ") +
+      ".";
+    $("#numericInput").value = "";
+    $("#formula").textContent = step.formula;
+    $("#validateBtn").textContent =
+      app.stepIndex === question.steps.length - 1
+        ? "Valider Req →"
+        : "Valider cette étape →";
+  }
+}
+function submitCascadeStep() {
+  const question = app.current,
+    step = question.steps[app.stepIndex];
+  if (!step) return;
+  let value;
+  try {
+    value = parseNumericAnswer($("#numericInput").value, step.unit);
+  } catch (error) {
+    $("#answerError").textContent = error.message;
+    $("#numericInput").setAttribute("aria-invalid", "true");
+    $("#numericInput").focus();
+    return;
+  }
+  const correct = isNumericCorrect(value, {
+    answer: step.answer,
+    precision: 4,
+  });
+  const raw = $("#numericInput").value.trim();
+  const response =
+    raw + (/[a-zΩ²]/i.test(raw.replace(/e[+-]?\d+/gi, "")) ? "" : " Ω");
+  app.stepResponses.push({
+    target: step.target,
+    response,
+    correct,
+    correction: step.calc,
+    reusedValue: step.answer,
+  });
+  app.stepIndex++;
+  renderCascade();
+  if (app.stepIndex < question.steps.length) {
+    $("#cascadeStatus").textContent =
+      `Étape ${app.stepIndex} ${correct ? "correcte" : "incorrecte"}. Pour la suite, ${step.target} = ${fmt(step.answer)} Ω. Passez à l’étape ${app.stepIndex + 1}.`;
+    $("#numericInput").focus();
+    return;
+  }
+  const correctCount = app.stepResponses.filter(
+    (result) => result.correct,
+  ).length;
+  app.stepCorrect += correctCount;
+  app.stepTotal += question.steps.length;
+  const allCorrect = correctCount === question.steps.length;
+  app.numericCorrect += Number(allCorrect);
+  completeAnswer({
+    earned: correctCount / question.steps.length,
+    correct: allCorrect,
+    response: app.stepResponses
+      .map(
+        (result, index) =>
+          `${index + 1}. ${result.target} : ${result.response}`,
+      )
+      .join("\n"),
+    evaluation: `${correctCount}/${question.steps.length} étapes correctes. Chaque étape vaut 1/${question.steps.length} point ; les valeurs corrigées ont été reprises pour la suite.`,
+  });
+}
+
 function submitAnswer() {
   if (app.screen !== "quiz" || !app.current || app.answered) return;
   clearError();
   const question = app.current,
     equation = question.kind === "equation";
+  if (question.kind === "cascade") {
+    submitCascadeStep();
+    return;
+  }
   let earned = 0,
     evaluation = "",
     response = "",
@@ -1059,6 +1276,16 @@ function submitAnswer() {
     $("#answerError").textContent = error.message;
     return;
   }
+  completeAnswer({ earned, evaluation, response, correct, equation });
+}
+function completeAnswer({
+  earned,
+  evaluation,
+  response,
+  correct,
+  equation = false,
+}) {
+  const question = app.current;
   app.answered = true;
   app.score += earned;
   recordResponse(response, earned, evaluation);
@@ -1073,7 +1300,7 @@ function submitAnswer() {
   const title = document.createElement("strong");
   title.textContent = `${correct ? "Bonne réponse." : earned ? "Une partie de la réponse est correcte." : "À reprendre."} +${fmt(earned)} ${earned > 1 ? "points" : "point"}${app.helpUsed ? " avant réduction" : ""}`;
   feedback.append(title);
-  if (equation) {
+  if (equation || question.kind === "cascade") {
     const detail = document.createElement("div");
     detail.textContent = evaluation;
     feedback.append(detail);
@@ -1128,7 +1355,10 @@ function finish() {
   const detail =
     app.mode === "formulas"
       ? `Équations correctes : ${app.formulaCorrect}/${app.total} → ${fmt(app.formulaCorrect * 0.5)} pts\nUnités correctes : ${app.unitCorrect}/${app.total} → ${fmt(app.unitCorrect * 0.5)} pts`
-      : `Bonnes réponses : ${app.numericCorrect}/${app.total}`;
+      : `Exercices entièrement corrects : ${app.numericCorrect}/${app.total}` +
+        (app.stepTotal
+          ? `\nÉtapes de circuits mixtes correctes : ${app.stepCorrect}/${app.stepTotal}`
+          : "");
   const breakdown = `${detail}\nTotal brut : ${fmt(app.score)} / ${app.total}\n${app.helpUsed ? "Aides utilisées : total ÷ 2" : "Sans aide : aucune réduction"}\nScore final : ${fmt(points)} / ${app.total}`;
   $("#scoreBreakdown").textContent = breakdown;
   const completedAt = new Date();
@@ -1139,7 +1369,7 @@ function finish() {
     rule:
       app.mode === "formulas"
         ? "0,5 point par équation correcte et 0,5 point par unité correcte."
-        : "1 point par bonne réponse.",
+        : "1 point par exercice. Pour un circuit mixte, ce point est réparti à parts égales entre ses étapes.",
     answers: app.history.map((answer) => ({ ...answer })),
   };
   const filename = `resultat-electricite-${completedAt.toISOString().replace(/[:.]/g, "-")}.pdf`;
@@ -1171,6 +1401,10 @@ function restart() {
     formulaCorrect: 0,
     unitCorrect: 0,
     numericCorrect: 0,
+    stepCorrect: 0,
+    stepTotal: 0,
+    stepIndex: 0,
+    stepResponses: [],
     result: null,
     history: [],
     equationDeck: [],
@@ -1290,6 +1524,27 @@ if (document.modelContext?.registerTool) {
             unit: app.current.kind === "equation" ? null : app.current.unit,
             context: app.current.unitContext || null,
             answered: app.answered,
+            ...(app.current.kind === "cascade"
+              ? {
+                  steps: app.current.steps.map((step) => ({
+                    target: step.target,
+                    title: step.title,
+                    description: step.description,
+                  })),
+                  stepNumber: app.answered ? null : app.stepIndex + 1,
+                  completedSteps: app.stepResponses.map((result) => ({
+                    ...result,
+                  })),
+                  reusedValues:
+                    app.current.steps[app.stepIndex]?.dependsOn.map(
+                      (index) => ({
+                        target: app.current.steps[index].target,
+                        value: app.current.steps[index].answer,
+                        unit: "Ω",
+                      }),
+                    ) || [],
+                }
+              : {}),
             questionNumber: app.index + 1,
             total: app.total,
           }
@@ -1327,7 +1582,8 @@ if (document.modelContext?.registerTool) {
   register({
     name: "answer_current_question",
     title: "Saisir un résultat",
-    description: "Valide une réponse numérique saisie librement.",
+    description:
+      "Valide une réponse numérique ou l’étape active d’un circuit mixte.",
     inputSchema: {
       type: "object",
       properties: { response: { type: "string" } },
@@ -1349,6 +1605,10 @@ if (document.modelContext?.registerTool) {
       submitAnswer();
       return {
         answered: app.answered,
+        stepNumber:
+          app.current.kind === "cascade" && !app.answered
+            ? app.stepIndex + 1
+            : null,
         score: finalPoints(),
         error: $("#answerError").textContent,
       };
