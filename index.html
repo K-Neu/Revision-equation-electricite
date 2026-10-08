@@ -1,417 +1,574 @@
 <!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#071321">
-  <meta name="description" content="QCM mobile pour réviser les calculs et les équations d’électricité, dont la loi de Pouillet.">
-  <title>Atelier Électricité</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23071321'/%3E%3Cpath d='M37 7 16 36h15l-4 21 21-30H34z' fill='%23ffd44d'/%3E%3C/svg%3E">
-  <style>
-    :root{color-scheme:dark;--bg:#071321;--panel:#0d2033;--panel2:#102a43;--line:#24435e;--text:#f4f8fb;--muted:#9eb2c4;--cyan:#55dff5;--yellow:#ffd44d;--green:#55e09b;--red:#ff7185;--shadow:0 22px 60px rgba(0,0,0,.32)}
-    *{box-sizing:border-box}
-    html{min-height:100%;background:var(--bg)}
-    body{margin:0;min-height:100vh;min-height:100dvh;background:radial-gradient(circle at 50% -10%,#123b5b 0,transparent 38%),linear-gradient(180deg,#071321,#081726);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);-webkit-tap-highlight-color:transparent}
-    button{font:inherit}
-    .app{width:min(100%,560px);min-height:100vh;min-height:100dvh;margin:auto;padding:max(18px,env(safe-area-inset-top)) 18px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:16px}
-    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .brand{display:flex;align-items:center;gap:11px}
-    .bolt{width:40px;height:40px;border:1px solid #31506a;border-radius:12px;display:grid;place-items:center;background:#0b1d2d;box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
-    .bolt svg{width:21px;fill:var(--yellow)}
-    .brand h1{margin:0;font-size:1.05rem;letter-spacing:.02em}.brand small{display:block;color:var(--muted);margin-top:2px;font-size:.76rem}
-    .score{font-variant-numeric:tabular-nums;text-align:right}.score strong{font-size:1.15rem;color:var(--yellow)}.score span{display:block;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
-    .tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:5px;border:1px solid var(--line);border-radius:14px;background:#081a2a}
-    .tabs button{min-height:42px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-weight:750;font-size:.84rem;cursor:pointer}
-    .tabs button[aria-selected="true"]{background:var(--panel2);color:var(--cyan);box-shadow:0 2px 8px rgba(0,0,0,.22)}
-    .formula-mode{grid-column:1/-1}
-    .aids-toggle{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 14px;border:1px solid var(--line);border-radius:13px;background:rgba(8,26,42,.82);color:var(--muted);font-size:.86rem;font-weight:700;cursor:pointer}
-    .switch{position:relative;width:46px;height:26px;flex:0 0 auto}.switch input{position:absolute;opacity:0;pointer-events:none}.switch i{position:absolute;inset:0;border-radius:99px;background:#29445a;transition:.2s}.switch i:after{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;border-radius:50%;background:#c2d0da;transition:.2s}.switch input:checked+i{background:var(--cyan)}.switch input:checked+i:after{transform:translateX(20px);background:#07202c}.switch input:focus-visible+i{outline:2px solid var(--yellow);outline-offset:3px}
-    .progress-row{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:.82rem;font-weight:650}
-    .progress{height:6px;flex:1;background:#18334a;border-radius:99px;overflow:hidden}.progress i{display:block;height:100%;width:10%;background:linear-gradient(90deg,var(--cyan),#80edc4);border-radius:inherit;transition:width .35s ease}
-    main{flex:1;display:flex;flex-direction:column}
-    .card{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:24px;background:linear-gradient(145deg,rgba(16,42,67,.98),rgba(10,28,44,.98));box-shadow:var(--shadow);padding:22px}
-    .card:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(85,223,245,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(85,223,245,.03) 1px,transparent 1px);background-size:24px 24px;pointer-events:none}
-    .card>*{position:relative}
-    .eyebrow{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--cyan);font-size:.75rem;font-weight:850;text-transform:uppercase;letter-spacing:.12em}
-    .formula{padding:6px 9px;border:1px solid #2b516d;border-radius:8px;color:var(--yellow);background:#091a29;text-transform:none;letter-spacing:.02em;font-size:.82rem}
-    .question{margin:24px 0 22px;font-size:clamp(1.32rem,5vw,1.65rem);line-height:1.27;letter-spacing:-.02em}
-    .given{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:22px}
-    .meter{background:#071927;border:1px solid #25445d;border-radius:13px;padding:13px 14px}.meter span{display:block;color:var(--muted);font-size:.75rem;margin-bottom:3px}.meter strong{font-size:1.15rem;color:#fff;font-variant-numeric:tabular-nums}
-    .answers{display:grid;gap:10px}
-    [hidden]{display:none!important}
-    .builder fieldset{border:0;padding:0;margin:0 0 16px;min-width:0}.builder legend{font-size:.9rem;color:var(--muted);margin-bottom:8px}
-    .keys{display:flex;flex-wrap:wrap;gap:8px}.key{min-width:46px;min-height:46px;padding:9px 13px;border:1px solid #31516a;border-radius:10px;background:#0b2032;color:var(--text);font-size:1rem;font-weight:750;cursor:pointer}.key[aria-pressed="true"]{background:#164454;border-color:var(--cyan);color:var(--cyan)}
-    .key:disabled{opacity:.55;cursor:default}button:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
-    .equation-display{padding:16px;margin:8px 0 10px;min-height:62px;border:1px solid var(--cyan);border-radius:12px;background:#071927;font-size:1.35rem;overflow-wrap:anywhere;line-height:1.5}.edit-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.edit-actions .key{font-size:.875rem}
-    .validate{width:100%;min-height:50px;border:0;border-radius:12px;background:var(--cyan);color:#06202b;font-weight:850;cursor:pointer}.validate:disabled{opacity:.45;cursor:default}.unit-context{color:var(--muted);font-size:.9rem;line-height:1.5;margin:0 0 16px}.builder-error{color:var(--red);font-size:.9rem}.builder .keys{margin-bottom:8px}
-    .answer{position:relative;width:100%;min-height:56px;padding:13px 48px 13px 16px;border:1px solid #31516a;border-radius:14px;background:#0b2032;color:var(--text);text-align:left;font-weight:780;cursor:pointer;transition:transform .14s ease,border-color .14s ease,background .14s ease}
-    .answer:hover{border-color:#4f7897}.answer:active{transform:scale(.985)}
-    .answer .letter{display:inline-grid;place-items:center;width:27px;height:27px;margin-right:10px;border-radius:8px;background:#18374f;color:var(--cyan);font-size:.8rem}
-    .answer.correct{border-color:var(--green);background:rgba(85,224,155,.12)}.answer.wrong{border-color:var(--red);background:rgba(255,113,133,.12)}.answer:disabled{cursor:default;color:var(--text)}
-    .answer .mark{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:1.1rem}
-    .feedback{display:none;margin-top:14px;padding:14px 15px;border-radius:14px;line-height:1.45;font-size:.9rem}.feedback.show{display:block}.feedback.ok{background:rgba(85,224,155,.09);border:1px solid rgba(85,224,155,.45)}.feedback.no{background:rgba(255,113,133,.09);border:1px solid rgba(255,113,133,.45)}
-    .feedback strong{display:block;margin-bottom:4px}.calculation{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--yellow)}
-    .next{display:none;width:100%;margin-top:14px;min-height:54px;border:0;border-radius:14px;background:var(--yellow);color:#132233;font-weight:900;cursor:pointer;box-shadow:0 8px 24px rgba(255,212,77,.18)}.next.show{display:block}
-    .formula-bar{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:.78rem}.formula-bar span{padding:7px 9px;border:1px solid #223e55;border-radius:9px;background:rgba(10,29,45,.72)}
-    .help-off .formula,.help-off .formula-bar,.help-off .calculation{display:none}.help-off .feedback strong{margin-bottom:0}
-    .summary{display:none;text-align:center}.summary.show{display:block}.summary .gauge{width:112px;height:112px;margin:8px auto 20px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--cyan) var(--score-angle),#17344b 0);position:relative}.summary .gauge:after{content:"";position:absolute;inset:9px;border-radius:50%;background:#0d2235}.summary .gauge strong{position:relative;z-index:1;font-size:1.55rem}.summary h2{font-size:1.55rem;margin:0 0 8px}.summary p{color:var(--muted);line-height:1.5;margin:0 0 20px}.summary button{width:100%;min-height:54px;border:0;border-radius:14px;background:var(--cyan);color:#06202b;font-weight:900;cursor:pointer}
-    .install{display:none;border:1px solid #31516a;background:#0b2032;color:var(--muted);padding:8px 11px;border-radius:10px;font-size:.76rem;cursor:pointer}.install.show{display:block}
-    .scoring-note{margin:-6px 0 0;color:var(--muted);font-size:.875rem;line-height:1.45}.scoring-note[data-assisted="true"]{color:var(--yellow)}
-    .summary .breakdown{padding:14px;background:#071927;border:1px solid var(--line);border-radius:12px;white-space:pre-line;text-align:left;font-size:.95rem;color:var(--text)}
-    .result-actions{display:grid;gap:10px;margin-bottom:16px}.summary .export-btn,.summary .whatsapp{display:flex;align-items:center;justify-content:center;min-height:50px;padding:12px;border:1px solid #31516a;border-radius:12px;background:#0b2032;color:var(--text);font-size:1rem;font-weight:750;text-decoration:none}.summary .whatsapp{border-color:var(--green);color:var(--green)}
-    .summary .gauge{width:132px;height:132px}.summary .gauge strong{font-size:1.4rem}
-    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    @media (min-width:700px){.app{padding-top:32px}.tabs{grid-template-columns:repeat(4,1fr)}.formula-mode{grid-column:auto}.card{padding:28px}.question{margin-top:30px}.answer{min-height:60px}}
-    @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
-  </style>
-</head>
-<body>
-  <div class="app">
-    <header>
-      <div class="brand"><div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13.2 1 3.8 13.4h6.7L9.1 23l9.7-13.2h-6.6z"/></svg></div><div><h1>Atelier Électricité</h1><small>Entraînement QCM</small></div></div>
-      <button class="install" id="installBtn">Installer</button>
-      <div class="score" id="scoreBox"><strong id="score">0 / 10</strong><span>points</span></div>
-    </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#182d3b" />
+    <meta
+      name="description"
+      content="Révisez les calculs, équations et unités électriques. Des réponses à saisir, des corrections détaillées et un bilan de progression."
+    />
+    <title>Atelier Électricité — Réviser et comprendre</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Aller au contenu</a>
+    <div class="app">
+      <header class="site-header">
+        <a
+          class="brand"
+          href="#accueil"
+          aria-label="Atelier Électricité — Accueil"
+        >
+          <span class="brand-icon" aria-hidden="true"
+            ><svg viewBox="0 0 24 24" fill="none">
+              <path
+                d="m13 3-7 10h6l-1 8 7-11h-6l1-7Z"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linejoin="round"
+              /></svg
+          ></span>
+          <span
+            >Atelier <strong>Électricité</strong
+            ><small>ESPACE DE RÉVISION</small></span
+          >
+        </a>
+        <nav class="site-nav" aria-label="Navigation principale">
+          <a href="#accueil" id="homeNav">Accueil</a>
+          <a href="#questionnaires" id="setupNav">Questionnaires</a>
+        </nav>
+        <button class="install button button-small" id="installBtn" hidden>
+          Installer l’app
+        </button>
+      </header>
 
-    <nav class="tabs" aria-label="Choix du thème">
-      <button data-mode="ohm" aria-selected="false">Loi d’Ohm</button>
-      <button data-mode="charge" aria-selected="false">Charge</button>
-      <button data-mode="power" aria-selected="false">Puissance</button>
-      <button data-mode="pouillet" aria-selected="false">Pouillet</button>
-      <button data-mode="section" aria-selected="false">Section ronde</button>
-      <button data-mode="series" aria-selected="false">En série</button>
-      <button data-mode="mix" aria-selected="true">Mélangé</button>
-      <button class="formula-mode" data-mode="formulas" aria-selected="false">Équations</button>
-    </nav>
+      <main id="main">
+        <section id="homeScreen" class="screen" aria-labelledby="homeTitle">
+          <div class="home-hero">
+            <div class="hero-copy">
+              <p class="eyebrow">
+                <span class="status-dot"></span> RÉVISION ÉLECTROTECHNIQUE
+              </p>
+              <h1 id="homeTitle" tabindex="-1">
+                Les bons réflexes,<br />à chaque <em>calcul.</em>
+              </h1>
+              <p class="hero-description">
+                Des fondamentaux aux équations, prenez le temps de comprendre.
+                Entraînez-vous à votre rythme et progressez, une réponse après
+                l’autre.
+              </p>
+              <a class="button button-primary hero-cta" href="#questionnaires"
+                >Commencer une révision <span aria-hidden="true">↗</span></a
+              >
+              <p class="hero-caption">
+                10 questions par série. Un bilan pour avancer.
+              </p>
+              <div class="hero-stats" aria-label="Contenu disponible">
+                <div><strong>06</strong><span>thèmes essentiels</span></div>
+                <div><strong>02</strong><span>formats d’exercice</span></div>
+                <div><strong>100 %</strong><span>réponses à saisir</span></div>
+              </div>
+            </div>
+            <div
+              class="technical-card"
+              aria-label="Illustration d’un circuit illustrant la loi d’Ohm"
+            >
+              <div class="technical-top">
+                <span>LES FONDAMENTAUX</span><span>FIG. 01</span>
+              </div>
+              <svg
+                class="circuit"
+                viewBox="0 0 420 280"
+                role="img"
+                aria-labelledby="circuitTitle"
+              >
+                <title id="circuitTitle">
+                  Circuit électrique avec une tension U, une résistance R et un
+                  courant I
+                </title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M80 122V64h105m70 0h85v152H80v-54" />
+                  <path d="M185 50h70v28h-70z" />
+                  <path d="M55 122h50m-38 20h26m-13 0v20" />
+                  <path d="M286 106v49m-5-8 5 8 5-8" />
+                  <circle cx="80" cy="64" r="3" fill="currentColor" />
+                  <circle cx="340" cy="216" r="3" fill="currentColor" />
+                </g>
+                <g
+                  fill="currentColor"
+                  font-family="ui-monospace,monospace"
+                  font-size="16"
+                >
+                  <text x="213" y="35">R</text>
+                  <text x="28" y="148">U</text>
+                  <text x="299" y="138">I</text>
+                  <text x="117" y="147" font-size="11" opacity=".55">
+                    CIRCUIT EN COURANT CONTINU
+                  </text>
+                </g>
+              </svg>
+              <div class="technical-equation">
+                <span>Loi d’Ohm</span><strong>U <i>=</i> R <i>×</i> I</strong
+                ><small
+                  >Comprendre les relations.<br />Retrouver le bon
+                  résultat.</small
+                >
+              </div>
+              <div class="technical-bottom">
+                <span>TENSION · RÉSISTANCE · INTENSITÉ</span
+                ><span aria-hidden="true">+</span>
+              </div>
+            </div>
+          </div>
+          <div class="method-heading">
+            <p class="eyebrow">UNE MÉTHODE SIMPLE</p>
+            <span>De la pratique, avec du sens.</span>
+          </div>
+          <div class="method-grid">
+            <article>
+              <span class="step-number">01</span>
+              <h2>Choisissez votre sujet</h2>
+              <p>Un thème précis ou une série mélangée pour faire le point.</p>
+            </article>
+            <article>
+              <span class="step-number">02</span>
+              <h2>Construisez votre réponse</h2>
+              <p>
+                Saisissez votre résultat ou votre équation, sans choix proposés.
+              </p>
+            </article>
+            <article>
+              <span class="step-number">03</span>
+              <h2>Comprenez la correction</h2>
+              <p>
+                Vérifiez votre raisonnement et retrouvez votre bilan en PDF.
+              </p>
+            </article>
+          </div>
+          <div id="lastResult" class="last-result" hidden>
+            <span>Votre dernière série</span
+            ><strong id="lastResultText"></strong
+            ><a href="#questionnaires"
+              >Continuer à s’entraîner <span aria-hidden="true">→</span></a
+            >
+          </div>
+        </section>
 
-    <label class="aids-toggle" for="helpToggle"><span>Afficher les aides</span><span class="switch"><input id="helpToggle" type="checkbox" checked><i aria-hidden="true"></i></span></label>
-    <p class="scoring-note" id="scoringNote" aria-live="polite"></p>
+        <section
+          id="setupScreen"
+          class="screen setup-screen"
+          aria-labelledby="setupTitle"
+          hidden
+        >
+          <div class="page-heading">
+            <p class="eyebrow">VOTRE PROCHAINE SÉRIE</p>
+            <h1 id="setupTitle" tabindex="-1">À vous de choisir.</h1>
+            <p>Le bon format, le bon thème. Dix questions pour progresser.</p>
+          </div>
+          <div class="setup-layout">
+            <div class="setup-options">
+              <fieldset class="choice-section">
+                <legend><span>01</span> Quel type de questionnaire ?</legend>
+                <div class="format-grid">
+                  <label class="format-card"
+                    ><input
+                      type="radio"
+                      name="quizType"
+                      value="numeric"
+                      checked
+                    /><span class="choice-check" aria-hidden="true"></span
+                    ><span class="format-symbol" aria-hidden="true">123</span
+                    ><strong>Calculs appliqués</strong
+                    ><span
+                      >Calculez une valeur à partir des données et saisissez
+                      votre résultat.</span
+                    ></label
+                  >
+                  <label class="format-card"
+                    ><input
+                      type="radio"
+                      name="quizType"
+                      value="equation"
+                    /><span class="choice-check" aria-hidden="true"></span
+                    ><span class="format-symbol" aria-hidden="true">ƒ(x)</span
+                    ><strong>Équations & unités</strong
+                    ><span
+                      >Écrivez la bonne relation et indiquez l’unité de la
+                      grandeur recherchée.</span
+                    ></label
+                  >
+                </div>
+              </fieldset>
+              <fieldset class="choice-section">
+                <legend><span>02</span> Sur quel thème ?</legend>
+                <div class="theme-grid">
+                  <label class="theme-card theme-mix"
+                    ><input
+                      type="radio"
+                      name="quizTheme"
+                      value="mix"
+                      checked /><span class="theme-symbol" aria-hidden="true"
+                      >↗</span
+                    ><span
+                      ><strong>Tous les thèmes</strong
+                      ><small>Une série pour tout revoir</small></span
+                    ><span class="choice-check" aria-hidden="true"></span
+                  ></label>
+                  <label class="theme-card"
+                    ><input type="radio" name="quizTheme" value="ohm" /><span
+                      class="theme-symbol"
+                      aria-hidden="true"
+                      >Ω</span
+                    ><span
+                      ><strong>Loi d’Ohm</strong
+                      ><small>Tension, intensité, résistance</small></span
+                    ><span class="choice-check" aria-hidden="true"></span
+                  ></label>
+                  <label class="theme-card"
+                    ><input type="radio" name="quizTheme" value="charge" /><span
+                      class="theme-symbol"
+                      aria-hidden="true"
+                      >Q</span
+                    ><span
+                      ><strong>Charge électrique</strong
+                      ><small>Charge, courant et durée</small></span
+                    ><span class="choice-check" aria-hidden="true"></span
+                  ></label>
+                  <label class="theme-card"
+                    ><input type="radio" name="quizTheme" value="power" /><span
+                      class="theme-symbol"
+                      aria-hidden="true"
+                      >P</span
+                    ><span
+                      ><strong>Puissance</strong
+                      ><small>Puissance, tension et courant</small></span
+                    ><span class="choice-check" aria-hidden="true"></span
+                  ></label>
+                  <label class="theme-card"
+                    ><input
+                      type="radio"
+                      name="quizTheme"
+                      value="pouillet" /><span
+                      class="theme-symbol"
+                      aria-hidden="true"
+                      >ρ</span
+                    ><span
+                      ><strong>Loi de Pouillet</strong
+                      ><small>Résistivité et conducteurs</small></span
+                    ><span class="choice-check" aria-hidden="true"></span
+                  ></label>
+                  <label class="theme-card"
+                    ><input
+                      type="radio"
+                      name="quizTheme"
+                      value="section" /><span
+                      class="theme-symbol"
+                      aria-hidden="true"
+                      >⌀</span
+                    ><span
+                      ><strong>Section ronde</strong
+                      ><small>Rayon, diamètre et surface</small></span
+                    ><span class="choice-check" aria-hidden="true"></span
+                  ></label>
+                  <label class="theme-card"
+                    ><input type="radio" name="quizTheme" value="series" /><span
+                      class="theme-symbol"
+                      aria-hidden="true"
+                      >Rₜ</span
+                    ><span
+                      ><strong>Résistances en série</strong
+                      ><small>Résistance totale et inconnues</small></span
+                    ><span class="choice-check" aria-hidden="true"></span
+                  ></label>
+                </div>
+              </fieldset>
+            </div>
+            <aside class="session-panel" aria-labelledby="sessionTitle">
+              <p class="eyebrow">VOTRE ENTRAÎNEMENT</p>
+              <h2 id="sessionTitle">Une série, un objectif.</h2>
+              <dl>
+                <div>
+                  <dt>Format</dt>
+                  <dd id="selectedType">Calculs appliqués</dd>
+                </div>
+                <div>
+                  <dt>Thème</dt>
+                  <dd id="selectedTheme">Tous les thèmes</dd>
+                </div>
+                <div>
+                  <dt>Questions</dt>
+                  <dd>10</dd>
+                </div>
+              </dl>
+              <label class="aids-toggle" for="setupHelpToggle"
+                ><span
+                  >Afficher les aides<small
+                    >Formules pendant les exercices</small
+                  ></span
+                ><span class="switch"
+                  ><input id="setupHelpToggle" type="checkbox" /><i
+                    aria-hidden="true"
+                  ></i></span
+              ></label>
+              <p class="panel-note">
+                Une bonne réponse vaut 1 point. Si vous utilisez les aides, le
+                score de la série est divisé par deux.
+              </p>
+              <button class="button button-primary" id="startBtn">
+                Démarrer la série <span aria-hidden="true">→</span>
+              </button>
+              <p class="session-caption">
+                Réponses libres · Correction immédiate
+              </p>
+            </aside>
+          </div>
+        </section>
 
-    <div class="progress-row"><span id="counter">Question 1 / 10</span><div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1"><i id="progressFill"></i></div></div>
+        <section
+          id="quizScreen"
+          class="screen quiz-screen"
+          aria-labelledby="quizTitle"
+          hidden
+        >
+          <div class="quiz-topline">
+            <button class="text-button" id="changeQuizBtn">
+              <span aria-hidden="true">←</span> Changer de questionnaire</button
+            ><span class="session-badge" id="quizTypeLabel"
+              >CALCULS APPLIQUÉS</span
+            >
+          </div>
+          <div class="quiz-heading">
+            <div>
+              <p class="eyebrow">SÉRIE EN COURS</p>
+              <h1 id="quizTitle" tabindex="-1">Tous les thèmes</h1>
+            </div>
+            <div class="score" id="scoreBox">
+              <strong id="score">0 / 10</strong><span>points</span>
+            </div>
+          </div>
+          <div class="progress-row">
+            <span id="counter">Question 1 / 10</span>
+            <div
+              class="progress"
+              role="progressbar"
+              aria-label="Progression du questionnaire"
+              aria-valuemin="0"
+              aria-valuemax="10"
+              aria-valuenow="0"
+            >
+              <i id="progressFill"></i>
+            </div>
+          </div>
+          <div class="quiz-layout">
+            <div>
+              <section
+                class="card question-card"
+                id="quizCard"
+                aria-labelledby="questionText"
+              >
+                <div class="question-meta">
+                  <span class="eyebrow" id="topic">Loi d’Ohm</span
+                  ><span id="questionNumber" class="question-number"
+                    >01 / 10</span
+                  >
+                </div>
+                <h2 class="question" id="questionText" tabindex="-1"></h2>
+                <div class="given" id="given"></div>
+                <p class="unit-context" id="unitContext" hidden></p>
+                <form id="answerForm" novalidate>
+                  <div id="numericAnswer">
+                    <label class="field-label" for="numericInput"
+                      >Votre résultat</label
+                    >
+                    <div class="input-with-unit">
+                      <input
+                        id="numericInput"
+                        type="text"
+                        maxlength="100"
+                        inputmode="decimal"
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="Saisissez votre réponse"
+                        aria-describedby="numericHint answerError"
+                      /><span id="numericUnit"></span>
+                    </div>
+                    <p class="field-hint" id="numericHint"></p>
+                  </div>
+                  <div id="equationAnswer" hidden>
+                    <label class="field-label" for="equationInput"
+                      >Votre équation</label
+                    >
+                    <div class="input-with-unit equation-field">
+                      <span id="equationTarget"></span
+                      ><span aria-hidden="true">=</span
+                      ><input
+                        id="equationInput"
+                        type="text"
+                        maxlength="300"
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="Écrivez la partie droite"
+                        aria-describedby="equationHint answerError"
+                      />
+                    </div>
+                    <p class="field-hint" id="equationHint">
+                      Utilisez * ou ×, / ou ÷, ^2 ou ² et sqrt(...) ou √(...).
+                    </p>
+                    <div
+                      class="symbol-keys"
+                      id="symbolKeys"
+                      aria-label="Insérer un symbole"
+                    ></div>
+                    <label class="field-label" for="unitInput"
+                      >Unité du résultat</label
+                    ><input
+                      id="unitInput"
+                      class="text-input"
+                      type="text"
+                      maxlength="100"
+                      autocomplete="off"
+                      spellcheck="false"
+                      placeholder="Saisissez l’unité"
+                      aria-describedby="unitHint answerError"
+                    />
+                    <p class="field-hint" id="unitHint">
+                      Exemples de notation : ohm, mm2, ohm·mm2/m.
+                    </p>
+                  </div>
+                  <p
+                    class="answer-error"
+                    id="answerError"
+                    role="status"
+                    aria-live="polite"
+                  ></p>
+                  <button
+                    class="button button-primary validate"
+                    type="submit"
+                    id="validateBtn"
+                  >
+                    Valider ma réponse <span aria-hidden="true">→</span>
+                  </button>
+                </form>
+                <div
+                  class="feedback"
+                  id="feedback"
+                  role="status"
+                  aria-live="polite"
+                  hidden
+                ></div>
+                <button class="button button-primary next" id="nextBtn" hidden>
+                  Question suivante <span aria-hidden="true">→</span>
+                </button>
+              </section>
+            </div>
+            <aside class="quiz-aside">
+              <div class="aside-label">VOTRE MÉTHODE</div>
+              <h2>Posez le raisonnement.</h2>
+              <p>
+                Identifiez la grandeur recherchée, choisissez la relation, puis
+                vérifiez les unités.
+              </p>
+              <label class="aids-toggle" for="helpToggle"
+                ><span>Afficher les aides</span
+                ><span class="switch"
+                  ><input id="helpToggle" type="checkbox" /><i
+                    aria-hidden="true"
+                  ></i></span
+              ></label>
+              <div id="formulaHelp" class="formula-help" hidden>
+                <span>RELATION UTILE</span><strong id="formula"></strong>
+              </div>
+              <p class="scoring-note" id="scoringNote" aria-live="polite"></p>
+              <div class="aside-bottom">
+                <span aria-hidden="true">↳</span> La précision vient avec la
+                pratique.
+              </div>
+            </aside>
+          </div>
+        </section>
 
-    <main>
-      <section class="card" id="quizCard" aria-labelledby="questionText">
-        <div class="eyebrow"><span id="topic">Loi d’Ohm</span><span class="formula" id="formula">U = R × I</span></div>
-        <h2 class="question" id="questionText">Chargement de la question…</h2>
-        <div class="given" id="given"></div>
-        <div class="answers" id="answers" role="group" aria-label="Réponses proposées"></div>
-        <div class="builder" id="builder" hidden>
-          <p class="unit-context" id="unitContext"></p>
-          <fieldset><legend>Variables du cours</legend><div class="keys" id="variableKeys"></div></fieldset>
-          <fieldset><legend>Opérations</legend><div class="keys" id="operatorKeys"></div></fieldset>
-          <div class="equation-display" aria-live="polite" aria-label="Votre équation"><span id="equationTarget"></span> = <span id="equationInput">…</span></div>
-          <div class="edit-actions"><button class="key" id="backspaceBtn">⌫ Effacer le dernier</button><button class="key" id="clearBtn">Tout effacer</button></div>
-          <fieldset><legend>Le résultat s’exprime en…</legend><div class="keys" id="unitKeys"></div></fieldset>
-          <p class="builder-error" id="builderError" role="status"></p>
-          <button class="validate" id="validateBtn" disabled>Valider l’équation et l’unité</button>
+        <section
+          id="summaryScreen"
+          class="screen summary-screen"
+          aria-labelledby="summaryTitle"
+          hidden
+        >
+          <p class="eyebrow">VOTRE BILAN</p>
+          <div class="summary-card">
+            <div class="summary-top">
+              <span>SÉRIE TERMINÉE</span><span id="summaryMode"></span>
+            </div>
+            <div class="gauge" id="gauge">
+              <strong id="finalScore">0 / 10</strong>
+            </div>
+            <h1 id="summaryTitle" tabindex="-1">Un pas de plus.</h1>
+            <p id="summaryText" class="summary-message"></p>
+            <p class="breakdown" id="scoreBreakdown"></p>
+            <div class="result-actions">
+              <button class="button button-primary" id="restartBtn">
+                Refaire une série <span aria-hidden="true">↗</span></button
+              ><a class="button" href="#questionnaires"
+                >Choisir un autre questionnaire</a
+              ><button class="button" id="exportBtn">
+                Télécharger le bilan PDF
+                <span aria-hidden="true">↓</span></button
+              ><button class="button" id="sharePdfBtn">
+                Partager le PDF · WhatsApp
+              </button>
+            </div>
+            <p
+              id="shareStatus"
+              class="field-hint"
+              role="status"
+              aria-live="polite"
+            >
+              Choisissez WhatsApp dans le menu de partage du téléphone.
+            </p>
+          </div>
+          <a class="text-button summary-home" href="#accueil"
+            >Retour à l’accueil <span aria-hidden="true">→</span></a
+          >
+        </section>
+      </main>
+      <footer class="site-footer">
+        <span
+          >Atelier Électricité
+          <span class="footer-separator">/</span> Comprendre. Pratiquer.
+          Progresser.</span
+        ><span>Conçu pour apprendre, à votre rythme.</span>
+      </footer>
+    </div>
+    <dialog id="leaveDialog">
+      <form method="dialog">
+        <p class="eyebrow">SÉRIE EN COURS</p>
+        <h2>Quitter cette série ?</h2>
+        <p>
+          Vos réponses en cours seront perdues. Vous pourrez démarrer un nouveau
+          questionnaire.
+        </p>
+        <div class="dialog-actions">
+          <button class="button" value="stay" autofocus>
+            Continuer la série</button
+          ><button class="button button-primary" value="leave">
+            Quitter la série
+          </button>
         </div>
-        <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
-        <button class="next" id="nextBtn">Question suivante</button>
-      </section>
-
-      <section class="card summary" id="summary" aria-labelledby="summaryTitle">
-        <div class="gauge" id="gauge"><strong id="finalScore">0/10</strong></div>
-        <h2 id="summaryTitle">Série terminée</h2>
-        <p id="summaryText"></p>
-        <p class="breakdown" id="scoreBreakdown"></p>
-        <div class="result-actions">
-          <button class="export-btn" id="exportBtn">Télécharger le résultat (PDF)</button>
-          <button class="whatsapp" id="sharePdfBtn">Partager le PDF · WhatsApp</button>
-        </div>
-        <p id="shareStatus" role="status" aria-live="polite">Choisis WhatsApp dans le menu de partage du téléphone.</p>
-        <button id="restartBtn">Recommencer une série</button>
-      </section>
-    </main>
-
-    <aside class="formula-bar" aria-label="Aide-mémoire des formules"><span>U = R × I</span><span>R = U ÷ I</span><span>I = U ÷ R</span><span>Q = I × T</span><span>P = U × I</span><span>R = ρ × L ÷ S</span></aside>
-  </div>
-
-  <script src="pdf-fonts.js"></script>
-  <script src="pdf-report.js"></script>
-  <script>
-    const $ = s => document.querySelector(s);
-    const app = { mode:'mix', index:0, score:0, answered:false, total:10, current:null, showHelp:localStorage.getItem('electricite-help')!=='false', helpUsed:false, completed:false, formulaCorrect:0, unitCorrect:0, numericCorrect:0, result:null, history:[], equationDeck:[] };
-    const pick = a => a[Math.floor(Math.random()*a.length)];
-    const shuffle = a => {const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
-    const fmt = n => Number(n.toFixed(4)).toLocaleString('fr-BE',{maximumFractionDigits:4});
-    const fmtPrecise = n => Number(n.toFixed(6)).toLocaleString('fr-BE',{maximumFractionDigits:6});
-    const modeNames={ohm:'Loi d’Ohm',charge:'Charge électrique',power:'Puissance',pouillet:'Loi de Pouillet',section:'Section ronde',series:'Résistances en série',mix:'Calculs mélangés',formulas:'Équations'};
-    function finalPoints(){return app.score/(app.helpUsed?2:1)}
-    function updateScore(){
-      $('#score').textContent=`${fmt(finalPoints())} / ${app.total}`;
-      const rule=app.mode==='formulas'?'Équation : 0,5 pt · Unité : 0,5 pt.':'Bonne réponse : 1 pt.';
-      $('#scoringNote').textContent=rule+' '+(app.helpUsed?'Aides utilisées : total de cette série divisé par 2.':'Si les aides sont affichées, le total de la série sera divisé par 2.');
-      $('#scoringNote').dataset.assisted=String(app.helpUsed);
-    }
-
-    function niceDistractors(answer){
-      const candidates=[answer*10,answer/10,answer*2,answer/2,answer*5,answer/5,answer+1,Math.max(.001,answer-1)];
-      const unique=[];
-      for(const n of shuffle(candidates)){const v=Number(n.toFixed(4));if(v>0&&v!==answer&&!unique.includes(v))unique.push(v);if(unique.length===3)break}
-      return unique;
-    }
-    function makeOptions(answer,unit){
-      return shuffle([answer,...niceDistractors(answer)]).map(v=>({value:v,label:`${fmt(v)} ${unit}`,correct:v===answer}));
-    }
-
-    const equationBank=[
-      {question:'Quelle équation calcule l’intensité I à partir de U et R ?',answer:'I = U ÷ R',wrong:['I = U × R','I = R ÷ U','I = U + R'],family:'Loi d’Ohm'},
-      {question:'Quelle équation calcule la tension U à partir de R et I ?',answer:'U = R × I',wrong:['U = R ÷ I','U = I ÷ R','U = R + I'],family:'Loi d’Ohm'},
-      {question:'Quelle équation calcule la résistance R à partir de U et I ?',answer:'R = U ÷ I',wrong:['R = U × I','R = I ÷ U','R = U + I'],family:'Loi d’Ohm'},
-      {question:'Quelle équation calcule la puissance P à partir de U et I ?',answer:'P = U × I',wrong:['P = U ÷ I','P = I ÷ U','P = U + I'],family:'Puissance'},
-      {question:'Quelle équation calcule l’intensité I à partir de P et U ?',answer:'I = P ÷ U',wrong:['I = P × U','I = U ÷ P','I = P + U'],family:'Puissance'},
-      {question:'Quelle équation calcule la tension U à partir de P et I ?',answer:'U = P ÷ I',wrong:['U = P × I','U = I ÷ P','U = P + I'],family:'Puissance'},
-      {question:'Quelle équation calcule la charge Q à partir de I et T ?',answer:'Q = I × T',wrong:['Q = I ÷ T','Q = T ÷ I','Q = I + T'],family:'Charge électrique'},
-      {question:'Quelle équation calcule l’intensité I à partir de Q et T ?',answer:'I = Q ÷ T',wrong:['I = Q × T','I = T ÷ Q','I = Q + T'],family:'Charge électrique'},
-      {question:'Quelle équation calcule la durée T à partir de Q et I ?',answer:'T = Q ÷ I',wrong:['T = Q × I','T = I ÷ Q','T = Q + I'],family:'Charge électrique'},
-      {question:'Quelle équation calcule la résistance R à partir de ρ, L et S ?',answer:'R = ρ × L ÷ S',wrong:['R = ρ × S ÷ L','R = L × S ÷ ρ','R = ρ × L × S'],family:'Loi de Pouillet'},
-      {question:'Quelle équation calcule la résistivité ρ à partir de R, L et S ?',answer:'ρ = R × S ÷ L',wrong:['ρ = R × L ÷ S','ρ = L × S ÷ R','ρ = R × L × S'],family:'Loi de Pouillet'},
-      {question:'Quelle équation calcule la longueur L à partir de R, ρ et S ?',answer:'L = R × S ÷ ρ',wrong:['L = R × ρ ÷ S','L = ρ × S ÷ R','L = R × ρ × S'],family:'Loi de Pouillet'},
-      {question:'Quelle équation calcule la section S à partir de ρ, L et R ?',answer:'S = ρ × L ÷ R',wrong:['S = ρ × R ÷ L','S = L × R ÷ ρ','S = ρ × L × R'],family:'Loi de Pouillet'}
-    ];
-    equationBank.push(
-      {question:'Quelle équation calcule la section S d’un conducteur rond à partir du rayon r ?',answer:'S = π × r ²',family:'Section ronde'},
-      {question:'Quelle équation calcule la section S d’un conducteur rond à partir du diamètre d ?',answer:'S = π × d ² ÷ 4',family:'Section ronde'},
-      {question:'Quelle équation calcule le rayon r à partir de la section S ?',answer:'r = √ ( S ÷ π )',family:'Section ronde'},
-      {question:'Quelle équation calcule le diamètre d à partir de la section S ?',answer:'d = 2 × √ ( S ÷ π )',family:'Section ronde'},
-      {question:'Quelle équation calcule le diamètre d à partir du rayon r ?',answer:'d = 2 × r',family:'Section ronde'},
-      {question:'Quelle équation calcule le rayon r à partir du diamètre d ?',answer:'r = d ÷ 2',family:'Section ronde'},
-      {question:'En série, quelle équation calcule Rₜ à partir de R₁ et R₂ ?',answer:'Rₜ = R₁ + R₂',family:'Résistances en série'},
-      {question:'En série, quelle équation calcule Rₜ à partir de R₁, R₂ et R₃ ?',answer:'Rₜ = R₁ + R₂ + R₃',family:'Résistances en série'},
-      {question:'Quelle résistance R₂ ajouter en série à R₁ pour atteindre le total Rₜ ?',answer:'R₂ = Rₜ − R₁',family:'Résistances en série'},
-      {question:'Quelle résistance R₃ ajouter en série à R₁ et R₂ pour atteindre Rₜ ?',answer:'R₃ = Rₜ − R₁ − R₂',family:'Résistances en série'},
-      {question:'En série, quelle équation retrouve R₁ à partir du total Rₜ et de R₂ ?',answer:'R₁ = Rₜ − R₂',family:'Résistances en série'}
-    );
-    function equationQuestion(){
-      if(!app.equationDeck.length)app.equationDeck=shuffle(equationBank);
-      const item=app.equationDeck.pop();
-      const target=item.answer.split(' = ')[0];
-      const units={I:'A',U:'V',R:'Ω',P:'W',Q:'C',T:'s',ρ:'Ω·mm²/m',L:'m',S:'mm²',r:'mm',d:'mm','Rₜ':'Ω','R₁':'Ω','R₂':'Ω','R₃':'Ω'};
-      const hours=item.family==='Charge électrique'&&Math.random()<.5;
-      if(hours){units.Q='Ah';units.T='h'}
-      // Only show the GIVEN quantities’ units, never the requested answer unit.
-      const givenUnits=item.answer.split(' = ')[1].split(' ').filter(v=>units[v]).map(v=>`${v} en ${units[v]}`);
-      return {kind:'equation',target,topic:'Équations · '+item.family,formula:item.answer,question:item.question,given:[],answer:item.answer,unit:units[target],unitContext:'Données exprimées avec '+givenUnits.join(', ')+'.',options:[],calc:`${item.answer} ; unité : ${units[target]}`};
-    }
-
-    const variables=['U','I','R','P','Q','T','ρ','L','S','r','d','Rₜ','R₁','R₂','R₃'];
-    const operators=['+','−','×','÷','(',')','π','²','√','2','4'];
-    const unitChoices=['V','A','Ω','W','C','Ah','s','h','m','mm','mm²','Ω·mm²/m'];
-    let equationTokens=[],selectedUnit='';
-    // Parse button tokens without eval; respect parentheses and arithmetic precedence.
-    function parseExpression(tokens){
-      let pos=0;
-      function atom(){const t=tokens[pos++];if(t==='('){const v=sum();if(tokens[pos++]!==')')throw Error('Parenthèse manquante');return v}if(t==='√'){const v=atom();return x=>Math.sqrt(v(x))}if(t==='π')return ()=>Math.PI;if(t==='2'||t==='4')return ()=>Number(t);if(!variables.includes(t))throw Error('Variable ou constante attendue');return x=>x[t]}
-      function power(){let a=atom();while(tokens[pos]==='²'){pos++;const prev=a;a=x=>prev(x)**2}return a}
-      function product(){let a=power();while(tokens[pos]==='×'||tokens[pos]==='÷'){const op=tokens[pos++],left=a,right=power();a=x=>op==='×'?left(x)*right(x):left(x)/right(x)}return a}
-      function sum(){let a=product();while(tokens[pos]==='+'||tokens[pos]==='−'){const op=tokens[pos++],left=a,right=product();a=x=>op==='+'?left(x)+right(x):left(x)-right(x)}return a}
-      const result=sum();if(pos!==tokens.length)throw Error('Équation incomplète ou mal formée');return result;
-    }
-    function equivalent(tokens,expected){
-      const a=parseExpression(tokens),b=parseExpression(expected.split(' '));
-      // Independent positive values cover all variables; no algebraic relation is assumed.
-      for(let trial=1;trial<=24;trial++){
-        const values=Object.fromEntries(variables.map((v,j)=>[v,.3+Math.abs(Math.sin(trial*12.9898+(j+1)*78.233))*97]));
-        const av=a(values),bv=b(values);if(!Number.isFinite(av)||!Number.isFinite(bv)||Math.abs(av-bv)>1e-9*Math.max(1,Math.abs(bv)))return false;
-      }return true;
-    }
-    function refreshBuilder(){
-      $('#equationInput').textContent=equationTokens.join(' ')||'…';
-      $('#validateBtn').disabled=app.answered||!equationTokens.length||!selectedUnit;
-      $('#backspaceBtn').disabled=app.answered||!equationTokens.length;
-      document.querySelectorAll('#unitKeys button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.unit===selectedUnit)));
-      $('#builderError').textContent='';
-    }
-    function setupBuilder(){
-      equationTokens=[];selectedUnit='';$('#equationTarget').textContent=app.current.target;$('#unitContext').textContent=app.current.unitContext;
-      for(const [id,values] of [['variableKeys',variables],['operatorKeys',operators]]){
-        $('#'+id).replaceChildren(...values.map(value=>{const b=document.createElement('button');b.className='key';b.textContent=value;b.onclick=()=>{if(app.answered)return;equationTokens.push(value);refreshBuilder()};return b}));
-      }
-      $('#unitKeys').replaceChildren(...unitChoices.map(unit=>{const b=document.createElement('button');b.className='key';b.dataset.unit=unit;b.textContent=unit;b.setAttribute('aria-pressed','false');b.onclick=()=>{if(app.answered)return;selectedUnit=unit;refreshBuilder()};return b}));
-      $('#clearBtn').disabled=false;refreshBuilder();
-    }
-    $('#backspaceBtn').onclick=()=>{if(!app.answered){equationTokens.pop();refreshBuilder()}};
-    $('#clearBtn').onclick=()=>{if(!app.answered){equationTokens=[];selectedUnit='';refreshBuilder()}};
-    $('#validateBtn').onclick=()=>{
-      if(app.answered||!equationTokens.length||!selectedUnit)return;
-      let formulaCorrect;
-      try{formulaCorrect=equivalent(equationTokens,app.current.answer.split(' = ')[1])}catch(error){$('#builderError').textContent=error.message+'. Corrige la saisie avant de valider.';return}
-      const unitCorrect=selectedUnit===app.current.unit,correct=formulaCorrect&&unitCorrect;
-      const earned=(formulaCorrect ? .5 : 0)+(unitCorrect ? .5 : 0);
-      app.answered=true;app.score+=earned;app.formulaCorrect+=Number(formulaCorrect);app.unitCorrect+=Number(unitCorrect);updateScore();
-      recordResponse(`${app.current.target} = ${equationTokens.join(' ')} ; unité : ${selectedUnit}`,earned,`Équation ${formulaCorrect?'correcte':'incorrecte'} ; unité ${unitCorrect?'correcte':'incorrecte'}.`);
-      document.querySelectorAll('#builder button').forEach(b=>b.disabled=true);
-      const f=$('#feedback');f.className=`feedback show ${correct?'ok':'no'}`;
-      f.innerHTML=`<strong>${correct?'Bonne réponse !':'Pas tout à fait.'} +${fmt(earned)} pt avant réduction éventuelle</strong><div>Équation : ${formulaCorrect?'correcte ✓ (+0,5)':'incorrecte × (+0)'} · Unité : ${unitCorrect?'correcte ✓ (+0,5)':'incorrecte × (+0)'}</div><span class="calculation">${app.current.calc}</span>`;
-      $('#nextBtn').textContent=app.index===app.total-1?'Voir mon résultat':'Question suivante';$('#nextBtn').className='next show';
-    };
-
-    function ohmQuestion(){
-      const type=pick(['u','i','r']);
-      const r=pick([2,5,10,12,20,25,40,50,100,200,500,1000]);
-      const i=pick([.01,.02,.05,.1,.2,.5,1,2,3,5,10]);
-      const u=Number((r*i).toFixed(4));
-      if(type==='u') return {topic:'Loi d’Ohm',formula:'U = R × I',question:'Quelle est la tension U ?',given:[['Résistance R',`${fmt(r)} Ω`],['Intensité I',`${fmt(i)} A`]],answer:u,unit:'V',calc:`U = ${fmt(r)} × ${fmt(i)} = ${fmt(u)} V`};
-      if(type==='i') return {topic:'Loi d’Ohm',formula:'I = U ÷ R',question:'Quelle est l’intensité I ?',given:[['Tension U',`${fmt(u)} V`],['Résistance R',`${fmt(r)} Ω`]],answer:i,unit:'A',calc:`I = ${fmt(u)} ÷ ${fmt(r)} = ${fmt(i)} A`};
-      return {topic:'Loi d’Ohm',formula:'R = U ÷ I',question:'Quelle est la résistance R ?',given:[['Tension U',`${fmt(u)} V`],['Intensité I',`${fmt(i)} A`]],answer:r,unit:'Ω',calc:`R = ${fmt(u)} ÷ ${fmt(i)} = ${fmt(r)} Ω`};
-    }
-
-    function chargeQuestion(){
-      const type=pick(['qah','i','t','coulomb']);
-      const i=pick([.02,.05,.1,.5,1,2,2.5,5,10,15,30]);
-      const t=pick([.2,.5,1,2,4,5,6,8,10,12,24]);
-      const q=Number((i*t).toFixed(4));
-      if(type==='qah') return {topic:'Charge électrique',formula:'Q = I × T',question:'Quelle charge Q est fournie ?',given:[['Intensité I',`${fmt(i)} A`],['Durée T',`${fmt(t)} h`]],answer:q,unit:'Ah',calc:`Q = ${fmt(i)} × ${fmt(t)} = ${fmt(q)} Ah`};
-      if(type==='i') return {topic:'Charge électrique',formula:'I = Q ÷ T',question:'Quelle est l’intensité I ?',given:[['Charge Q',`${fmt(q)} Ah`],['Durée T',`${fmt(t)} h`]],answer:i,unit:'A',calc:`I = ${fmt(q)} ÷ ${fmt(t)} = ${fmt(i)} A`};
-      if(type==='t') return {topic:'Charge électrique',formula:'T = Q ÷ I',question:'Combien de temps dure le passage du courant ?',given:[['Charge Q',`${fmt(q)} Ah`],['Intensité I',`${fmt(i)} A`]],answer:t,unit:'h',calc:`T = ${fmt(q)} ÷ ${fmt(i)} = ${fmt(t)} h`};
-      const seconds=pick([30,60,120,300,600,1800,3600]);
-      const amps=pick([.02,.1,.5,1,2,5,10,30]);
-      const coulombs=Number((amps*seconds).toFixed(4));
-      return {topic:'Charge électrique',formula:'Q = I × T',question:'Quelle charge Q est transférée ?',given:[['Intensité I',`${fmt(amps)} A`],['Durée T',`${fmt(seconds)} s`]],answer:coulombs,unit:'C',calc:`Q = ${fmt(amps)} × ${fmt(seconds)} = ${fmt(coulombs)} C`};
-    }
-
-    function powerQuestion(){
-      const type=pick(['p','u','i']);
-      const u=pick([6,9,12,24,48,120,230,400]);
-      const i=pick([.02,.05,.1,.5,1,2,3,5,10,16,20,32]);
-      const p=Number((u*i).toFixed(4));
-      if(type==='p') return {topic:'Puissance électrique',formula:'P = U × I',question:'Quelle est la puissance P ?',given:[['Tension U',`${fmt(u)} V`],['Intensité I',`${fmt(i)} A`]],answer:p,unit:'W',calc:`P = ${fmt(u)} × ${fmt(i)} = ${fmt(p)} W`};
-      if(type==='u') return {topic:'Puissance électrique',formula:'U = P ÷ I',question:'Quelle est la tension U ?',given:[['Puissance P',`${fmt(p)} W`],['Intensité I',`${fmt(i)} A`]],answer:u,unit:'V',calc:`U = ${fmt(p)} ÷ ${fmt(i)} = ${fmt(u)} V`};
-      return {topic:'Puissance électrique',formula:'I = P ÷ U',question:'Quelle est l’intensité I ?',given:[['Puissance P',`${fmt(p)} W`],['Tension U',`${fmt(u)} V`]],answer:i,unit:'A',calc:`I = ${fmt(p)} ÷ ${fmt(u)} = ${fmt(i)} A`};
-    }
-
-    function pouilletQuestion(){
-      const type=pick(['r','rho','l','s']);
-      const material=pick([{name:'Cuivre',rho:.0175},{name:'Aluminium',rho:.0282}]);
-      const l=pick([10,20,25,40,50,80,100]);
-      const s=pick([1.5,2.5,4,6,10,16]);
-      const r=Number((material.rho*l/s).toFixed(6));
-      if(type==='r') return {topic:'Loi de Pouillet · '+material.name,formula:'R = ρ × L ÷ S',question:'Quelle est la résistance R du conducteur ?',given:[['Résistivité ρ',`${fmtPrecise(material.rho)} Ω·mm²/m`],['Longueur L',`${fmt(l)} m`],['Section S',`${fmt(s)} mm²`]],answer:r,unit:'Ω',calc:`R = ${fmtPrecise(material.rho)} × ${fmt(l)} ÷ ${fmt(s)} = ${fmtPrecise(r)} Ω`};
-      if(type==='rho') return {topic:'Loi de Pouillet · '+material.name,formula:'ρ = R × S ÷ L',question:'Quelle est la résistivité ρ du conducteur ?',given:[['Résistance R',`${fmtPrecise(r)} Ω`],['Longueur L',`${fmt(l)} m`],['Section S',`${fmt(s)} mm²`]],answer:material.rho,unit:'Ω·mm²/m',calc:`ρ = ${fmtPrecise(r)} × ${fmt(s)} ÷ ${fmt(l)} = ${fmtPrecise(material.rho)} Ω·mm²/m`};
-      if(type==='l') return {topic:'Loi de Pouillet · '+material.name,formula:'L = R × S ÷ ρ',question:'Quelle est la longueur L du conducteur ?',given:[['Résistance R',`${fmtPrecise(r)} Ω`],['Résistivité ρ',`${fmtPrecise(material.rho)} Ω·mm²/m`],['Section S',`${fmt(s)} mm²`]],answer:l,unit:'m',calc:`L = ${fmtPrecise(r)} × ${fmt(s)} ÷ ${fmtPrecise(material.rho)} = ${fmt(l)} m`};
-      return {topic:'Loi de Pouillet · '+material.name,formula:'S = ρ × L ÷ R',question:'Quelle est la section S du conducteur ?',given:[['Résistivité ρ',`${fmtPrecise(material.rho)} Ω·mm²/m`],['Longueur L',`${fmt(l)} m`],['Résistance R',`${fmtPrecise(r)} Ω`]],answer:s,unit:'mm²',calc:`S = ${fmtPrecise(material.rho)} × ${fmt(l)} ÷ ${fmtPrecise(r)} = ${fmt(s)} mm²`};
-    }
-
-    function sectionQuestion(){
-      const type=pick(['sr','sd','rs','ds','dr','rd']);
-      const r=pick([.25,.5,.75,1,1.25,1.5,2,2.5,3,4]);const d=2*r;
-      const s=pick([.5,.75,1,1.5,2.5,4,6,10,16,25]);
-      const cases={
-        sr:{question:'Quelle est la surface de section S du conducteur rond ?',given:[['Rayon r',`${fmt(r)} mm`]],answer:Math.PI*r*r,unit:'mm²',formula:'S = π × r²',calc:`S = π × ${fmt(r)}²`},
-        sd:{question:'Quelle est la surface de section S du conducteur rond ?',given:[['Diamètre d',`${fmt(d)} mm`]],answer:Math.PI*d*d/4,unit:'mm²',formula:'S = π × d² ÷ 4',calc:`S = π × ${fmt(d)}² ÷ 4`},
-        rs:{question:'Quel est le rayon r du conducteur rond ?',given:[['Section S',`${fmt(s)} mm²`]],answer:Math.sqrt(s/Math.PI),unit:'mm',formula:'r = √(S ÷ π)',calc:`r = √(${fmt(s)} ÷ π)`},
-        ds:{question:'Quel est le diamètre d du conducteur rond ?',given:[['Section S',`${fmt(s)} mm²`]],answer:2*Math.sqrt(s/Math.PI),unit:'mm',formula:'d = 2 × √(S ÷ π)',calc:`d = 2 × √(${fmt(s)} ÷ π)`},
-        dr:{question:'Quel est le diamètre d du conducteur rond ?',given:[['Rayon r',`${fmt(r)} mm`]],answer:d,unit:'mm',formula:'d = 2 × r',calc:`d = 2 × ${fmt(r)}`},
-        rd:{question:'Quel est le rayon r du conducteur rond ?',given:[['Diamètre d',`${fmt(d)} mm`]],answer:r,unit:'mm',formula:'r = d ÷ 2',calc:`r = ${fmt(d)} ÷ 2`}
-      };
-      const q=cases[type];q.answer=Number(q.answer.toFixed(4));
-      return {...q,topic:'Section ronde',question:q.question+' (Arrondi à 4 décimales si nécessaire.)',calc:q.calc+` ≈ ${fmt(q.answer)} ${q.unit}`};
-    }
-    function seriesQuestion(){
-      const values=[5,10,15,22,33,47,68,100,150,220,330,470];
-      const r1=pick(values),r2=pick(values),r3=pick(values),total=r1+r2+r3;
-      const meter=(label,n)=>[label,`${fmt(n)} Ω`];
-      const cases=[
-        {question:'R₁ et R₂ sont en série. Quelle est la résistance totale Rₜ ?',given:[meter('R₁',r1),meter('R₂',r2)],answer:r1+r2,formula:'Rₜ = R₁ + R₂',calc:`Rₜ = ${r1} + ${r2}`},
-        {question:'R₁, R₂ et R₃ sont en série. Quelle est la résistance totale Rₜ ?',given:[meter('R₁',r1),meter('R₂',r2),meter('R₃',r3)],answer:total,formula:'Rₜ = R₁ + R₂ + R₃',calc:`Rₜ = ${r1} + ${r2} + ${r3}`},
-        {question:'Quelle résistance R₂ ajouter en série à R₁ pour atteindre le total souhaité Rₜ ?',given:[meter('R₁ existante',r1),meter('Total souhaité Rₜ',r1+r2)],answer:r2,formula:'R₂ = Rₜ − R₁',calc:`R₂ = ${r1+r2} − ${r1}`},
-        {question:'Quelle résistance R₃ ajouter en série à R₁ et R₂ pour atteindre Rₜ ?',given:[meter('R₁',r1),meter('R₂',r2),meter('Total souhaité Rₜ',total)],answer:r3,formula:'R₃ = Rₜ − R₁ − R₂',calc:`R₃ = ${total} − ${r1} − ${r2}`},
-        {question:'Deux résistances sont en série. Quelle est la résistance inconnue R₁ ?',given:[meter('Total Rₜ',r1+r2),meter('R₂ connue',r2)],answer:r1,formula:'R₁ = Rₜ − R₂',calc:`R₁ = ${r1+r2} − ${r2}`}
-      ];
-      const q=pick(cases);return {...q,topic:'Résistances en série',unit:'Ω',calc:q.calc+` = ${q.answer} Ω`};
-    }
-    function newQuestion(){
-      app.answered=false;
-      if(app.showHelp)app.helpUsed=true;updateScore();
-      const mode=app.mode==='mix'?pick(['ohm','charge','power','pouillet','section','series']):app.mode;
-      const q=mode==='ohm'?ohmQuestion():mode==='charge'?chargeQuestion():mode==='power'?powerQuestion():mode==='pouillet'?pouilletQuestion():mode==='section'?sectionQuestion():mode==='series'?seriesQuestion():equationQuestion();
-      if(!q.options)q.options=makeOptions(q.answer,q.unit); app.current=q;
-      $('#answers').hidden=q.kind==='equation';$('#builder').hidden=q.kind!=='equation';if(q.kind==='equation')setupBuilder();
-      $('#topic').textContent=q.topic; $('#formula').textContent=q.formula; $('#questionText').textContent=q.question;
-      $('#given').innerHTML=q.given.map(([label,value])=>`<div class="meter"><span>${label}</span><strong>${value}</strong></div>`).join('');
-      $('#answers').innerHTML=q.options.map((o,n)=>`<button class="answer" data-option="${n}" data-correct="${o.correct}"><span class="letter">${String.fromCharCode(65+n)}</span>${o.label}</button>`).join('');
-      document.querySelectorAll('.answer').forEach(b=>b.addEventListener('click',answer));
-      $('#feedback').className='feedback'; $('#feedback').innerHTML=''; $('#nextBtn').className='next';
-      $('#counter').textContent=`Question ${app.index+1} / ${app.total}`;
-      const p=(app.index+1)/app.total*100; $('#progressFill').style.width=`${p}%`; $('.progress').setAttribute('aria-valuenow',app.index+1);
-    }
-
-    function recordResponse(response,earned,evaluation){
-      const q=app.current;
-      app.history.push({question:q.question,given:q.given.map(pair=>[...pair]),context:q.unitContext||'',response,correction:q.calc,earned,evaluation});
-    }
-    function answer(e){
-      if(app.answered)return; app.answered=true;
-      const correct=e.currentTarget.dataset.correct==='true';
-      if(correct){app.score++;app.numericCorrect++}
-      recordResponse(app.current.options[Number(e.currentTarget.dataset.option)].label,correct?1:0,correct?'Réponse correcte.':'Réponse incorrecte.');
-      updateScore();
-      document.querySelectorAll('.answer').forEach(b=>{b.disabled=true;const isCorrect=b.dataset.correct==='true';if(isCorrect){b.classList.add('correct');b.insertAdjacentHTML('beforeend','<span class="mark">✓</span>')}else if(b===e.currentTarget){b.classList.add('wrong');b.insertAdjacentHTML('beforeend','<span class="mark">×</span>')}});
-      const f=$('#feedback');f.className=`feedback show ${correct?'ok':'no'}`;f.innerHTML=`<strong>${correct?'Bonne réponse !':'Pas tout à fait.'}</strong><span class="calculation">${app.current.calc}</span>`;
-      $('#nextBtn').textContent=app.index===app.total-1?'Voir mon résultat':'Question suivante';$('#nextBtn').className='next show';
-    }
-
-    function finish(){
-      if(app.completed)return;
-      app.completed=true;
-      $('#quizCard').style.display='none'; $('#summary').classList.add('show'); $('#counter').textContent='Série terminée'; $('#progressFill').style.width='100%';
-      const points=finalPoints();
-      $('#finalScore').textContent=`${fmt(points)} / ${app.total}`;$('#gauge').style.setProperty('--score-angle',`${points/app.total*360}deg`);
-      const msg=app.score===10?'Parfait, les formules sont bien maîtrisées.':app.score>=7?'Très bien. Encore une série pour consolider les automatismes.':app.score>=5?'Bonne base. Reprenez les formules puis retentez une série.':'Continuez tranquillement : chaque calcul corrigé vous fait progresser.';
-      $('#summaryText').textContent=msg;
-      const detail=app.mode==='formulas'?`Équations correctes : ${app.formulaCorrect}/${app.total} → ${fmt(app.formulaCorrect*.5)} pts\nUnités correctes : ${app.unitCorrect}/${app.total} → ${fmt(app.unitCorrect*.5)} pts`:`Bonnes réponses : ${app.numericCorrect}/${app.total}`;
-      const breakdown=`${detail}\nTotal brut : ${fmt(app.score)} / ${app.total}\n${app.helpUsed?'Aides utilisées : total ÷ 2':'Sans aide : aucune réduction'}\nScore final : ${fmt(points)} / ${app.total}`;
-      $('#scoreBreakdown').textContent=breakdown;
-      const completedAt=new Date();
-      const report={date:completedAt.toLocaleString('fr-BE'),mode:modeNames[app.mode],breakdown,rule:app.mode==='formulas'?'0,5 point par équation correcte et 0,5 point par unité correcte.':'1 point par bonne réponse.',answers:app.history.map(answer=>({...answer}))};
-      const filename=`resultat-electricite-${completedAt.toISOString().replace(/[:.]/g,'-')}.pdf`;
-      const blob=new Blob([createQuizPdf(report)],{type:'application/pdf'});
-      const file=typeof File==='function'?new File([blob],filename,{type:'application/pdf'}):null;
-      app.result=Object.freeze({report,filename,blob,file,points});
-      $('#shareStatus').textContent='Choisis WhatsApp dans le menu de partage du téléphone.';
-      const best=Math.max(points,Number(localStorage.getItem('electricite-best-v2')||0));localStorage.setItem('electricite-best-v2',best);
-    }
-    function restart(){app.index=0;app.score=0;app.helpUsed=false;app.completed=false;app.formulaCorrect=0;app.unitCorrect=0;app.numericCorrect=0;app.result=null;app.history=[];app.equationDeck=[];$('#summary').classList.remove('show');$('#quizCard').style.display='block';newQuestion()}
-    function setHelp(enabled){app.showHelp=enabled;if(enabled&&app.current&&!app.completed)app.helpUsed=true;document.body.classList.toggle('help-off',!enabled);$('#helpToggle').checked=enabled;localStorage.setItem('electricite-help',String(enabled));updateScore()}
-    function downloadResult(){
-      if(!app.result)return;
-      const url=URL.createObjectURL(app.result.blob);
-      const link=document.createElement('a');link.href=url;link.download=app.result.filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-    }
-    $('#exportBtn').addEventListener('click',downloadResult);
-    $('#sharePdfBtn').addEventListener('click',async()=>{
-      if(!app.result)return;
-      const file=app.result.file;
-      try{
-        if(file&&navigator.share&&navigator.canShare?.({files:[file]})){
-          await navigator.share({files:[file],title:'Résultat - Atelier Électricité'});
-          $('#shareStatus').textContent='Le PDF a été transmis au menu de partage.';
-        }else{
-          downloadResult();
-          $('#shareStatus').textContent='Le partage de fichiers n’est pas disponible ici. Le PDF est téléchargé : joins-le comme document dans WhatsApp.';
-        }
-      }catch(error){
-        $('#shareStatus').textContent=error.name==='AbortError'?'Partage annulé. Le PDF reste disponible.':'Le partage n’a pas abouti. Télécharge le PDF puis joins-le comme document dans WhatsApp.';
-      }
-    });
-    $('#nextBtn').addEventListener('click',()=>{app.index++;app.index>=app.total?finish():newQuestion()});
-    $('#restartBtn').addEventListener('click',restart);
-    document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected','false'));b.setAttribute('aria-selected','true');app.mode=b.dataset.mode;restart()}));
-    $('#helpToggle').addEventListener('change',e=>setHelp(e.currentTarget.checked));
-    let installPrompt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('#installBtn').classList.add('show');$('#scoreBox').style.display='none'});
-    $('#installBtn').addEventListener('click',async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('#installBtn').classList.remove('show');$('#scoreBox').style.display='block'});
-    if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));
-    setHelp(app.showHelp);newQuestion();
-
-    if(document.modelContext?.registerTool){
-      const toolLife=new AbortController();
-      const register=tool=>Promise.resolve(document.modelContext.registerTool(tool,{signal:toolLife.signal})).catch(()=>{});
-      register({name:'read_current_question',title:'Lire la question',description:'Retourne la question et les choix ou boutons disponibles.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute:()=>({question:app.current.question,given:app.current.given,options:app.current.options.map(o=>o.label),builder:app.current.kind==='equation'?{target:app.current.target,variables,units:unitChoices,context:app.current.unitContext}:null,questionNumber:app.index+1,total:app.total})});
-      register({name:'start_quiz_series',title:'Démarrer une série',description:'Démarre une nouvelle série de dix questions dans le thème choisi.',inputSchema:{type:'object',properties:{mode:{type:'string',enum:['ohm','charge','power','pouillet','section','series','mix','formulas']}},required:['mode'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(!['ohm','charge','power','pouillet','section','series','mix','formulas'].includes(input?.mode))throw new Error('Mode invalide');document.querySelector(`[data-mode="${input.mode}"]`).click();return{status:'started',mode:input.mode,total:app.total}}});
-      register({name:'answer_current_question',title:'Répondre au QCM',description:'Sélectionne une réponse dans les exercices chiffrés.',inputSchema:{type:'object',properties:{option:{type:'integer',minimum:1,maximum:4}},required:['option'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(app.current.kind==='equation')throw new Error('Utilisez submit_equation pour construire une équation');if(!Number.isInteger(input?.option)||input.option<1||input.option>4)throw new Error('L’option doit être comprise entre 1 et 4');if(app.answered)throw new Error('Cette question a déjà reçu une réponse');const button=document.querySelectorAll('.answer')[input.option-1];const correct=button.dataset.correct==='true';button.click();return{correct,score:finalPoints(),rawScore:app.score,calculation:app.current.calc}}});
-      register({name:'submit_equation',title:'Construire une équation',description:'Valide les symboles de la partie droite et son unité dans le mode Équations.',inputSchema:{type:'object',properties:{tokens:{type:'array',items:{type:'string',enum:[...variables,...operators]}},unit:{type:'string',enum:unitChoices}},required:['tokens','unit'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(app.current.kind!=='equation'||app.answered)throw new Error('Aucune équation à compléter');if(!Array.isArray(input.tokens)||!input.tokens.length||input.tokens.length>100||input.tokens.some(t=>![...variables,...operators].includes(t))||!unitChoices.includes(input.unit))throw new Error('Symboles ou unité invalides');equationTokens=[...input.tokens];selectedUnit=input.unit;refreshBuilder();$('#validateBtn').click();return{answered:app.answered,score:finalPoints(),rawScore:app.score,error:$('#builderError').textContent}}});
-    }
-  </script>
-</body>
+      </form>
+    </dialog>
+    <script src="pdf-fonts.js"></script>
+    <script src="pdf-report.js"></script>
+    <script src="app.js"></script>
+  </body>
 </html>
