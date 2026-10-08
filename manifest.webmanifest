@@ -1,12 +1,17 @@
 {
   "name": "Atelier Électricité",
   "short_name": "Électricité",
-  "description": "QCM mobile pour réviser les calculs et les équations d’électricité, dont la loi de Pouillet.",
+  "description": "Révisez les calculs, équations et unités électriques avec des réponses à saisir et des corrections détaillées.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#071321",
-  "theme_color": "#071321",
+  "background_color": "#f6f7f5",
+  "theme_color": "#182d3b",
   "icons": [
-    {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }
