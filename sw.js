@@ -1,10 +1,11 @@
-const CACHE = "atelier-electricite-v11";
+const CACHE = "atelier-electricite-v12";
 const ASSETS = [
   "./",
   "index.html",
   "styles.css",
   "app.js",
   "circuits.js",
+  "school-exercises.js",
   "manifest.webmanifest",
   "icon.svg",
   "pdf-report.js",

@@ -39,6 +39,7 @@ const app = {
   history: [],
   equationDeck: [],
   numericDeck: [],
+  exerciseDecks: {},
 };
 const pick = (values) => values[Math.floor(Math.random() * values.length)];
 const shuffle = (values) => {
@@ -66,6 +67,7 @@ const modeNames = {
   series: "Résistances en série",
   parallel: "Résistances en parallèle",
   mixed: "Circuits mixtes",
+  voltageDrop: "Chute de tension",
   mix: "Tous les thèmes",
   formulas: "Équations & unités",
 };
@@ -78,6 +80,7 @@ const familyNames = {
   series: "Résistances en série",
   parallel: "Résistances en parallèle",
   mixed: "Circuits mixtes",
+  voltageDrop: "Chute de tension",
 };
 const screenHashes = {
   home: "#accueil",
@@ -221,6 +224,10 @@ const variables = [
   "R₂",
   "R₃",
   "R₄",
+  "Ug",
+  "Ur",
+  "ΔU",
+  "J",
 ];
 // Both keyboard notation and the course's mathematical symbols are accepted.
 function tokenizeExpression(value, target) {
@@ -230,6 +237,7 @@ function tokenizeExpression(value, target) {
     .replace(/sqrt/gi, "√")
     .replace(/rho/gi, "ρ")
     .replace(/pi/gi, "π")
+    .replace(/deltaU/gi, "ΔU")
     .replace(/\bR_?eq\b/gi, "Rₜ")
     .replace(/R_?t\b/gi, "Rₜ")
     .replace(
@@ -251,7 +259,9 @@ function tokenizeExpression(value, target) {
   while (source.trim()) {
     source = source.trimStart();
     const match =
-      /^(R[ₜ₁₂₃₄]|[UIRPQTρLSrdπ√²()+−×÷]|(?:\d+(?:\.\d*)?|\.\d+))/.exec(source);
+      /^(Ug|Ur|ΔU|R[ₜ₁₂₃₄]|[UIJRPQTρLSrdπ√²()+−×÷]|(?:\d+(?:\.\d*)?|\.\d+))/.exec(
+        source,
+      );
     if (!match)
       throw Error(
         "Utilisez les variables du cours et les opérations indiquées.",
@@ -572,6 +582,63 @@ equationBank.push(
       "R₁ et R₂ sont en parallèle, puis en série avec R₃. Cette branche est en parallèle avec R₄. Écrivez Rₜ (Req).",
     answer: "Rₜ = 1 ÷ ( 1 ÷ ( R₁ × R₂ ÷ ( R₁ + R₂ ) + R₃ ) + 1 ÷ R₄ )",
     family: "Circuits mixtes",
+  },
+);
+
+equationBank.push(
+  {
+    question:
+      "Une ligne de résistance totale R transporte le courant I. Quelle équation calcule la chute de tension ΔU ?",
+    answer: "ΔU = R × I",
+    family: "Chute de tension",
+  },
+  {
+    question:
+      "La source fournit Ug et la ligne perd ΔU. Quelle tension Ur reçoit le récepteur ?",
+    answer: "Ur = Ug − ΔU",
+    family: "Chute de tension",
+  },
+  {
+    question:
+      "Quelle tension Ug doit fournir la source pour que le récepteur reçoive Ur malgré la chute ΔU ?",
+    answer: "Ug = Ur + ΔU",
+    family: "Chute de tension",
+  },
+  {
+    question:
+      "Une ligne bifilaire a une distance L (un trajet), une résistivité ρ et un courant I. Quelle section S limite sa chute à ΔU ?",
+    answer: "S = ρ × 2 × L × I ÷ ΔU",
+    family: "Chute de tension",
+  },
+  {
+    question:
+      "Quelle équation calcule la densité de courant J à partir de I et S ?",
+    answer: "J = I ÷ S",
+    family: "Chute de tension",
+  },
+  {
+    question:
+      "Un récepteur résistif est traversé par I. Quelle équation calcule P à partir de R et I ?",
+    answer: "P = R × I²",
+    family: "Puissance",
+  },
+  {
+    question:
+      "Quelle équation calcule P à partir de U et R pour un récepteur résistif ?",
+    answer: "P = U² ÷ R",
+    family: "Puissance",
+  },
+  {
+    question:
+      "En série, R₁ et R₂ reçoivent U. Quelle équation calcule le courant commun I ?",
+    answer: "I = U ÷ (R₁ + R₂)",
+    family: "Résistances en série",
+  },
+  {
+    question:
+      "Deux résistances en parallèle reçoivent U. Quelle équation calcule le courant total I ?",
+    answer: "I = U ÷ R₁ + U ÷ R₂",
+    family: "Résistances en parallèle",
   },
 );
 
@@ -946,6 +1013,10 @@ function equationQuestion() {
     "R₂": "Ω",
     "R₃": "Ω",
     "R₄": "Ω",
+    Ug: "V",
+    Ur: "V",
+    ΔU: "V",
+    J: "A/mm²",
   };
   if (item.family === "Charge électrique" && Math.random() < 0.5) {
     units.Q = "Ah";
@@ -1016,25 +1087,15 @@ function newQuestion(focus = true) {
       app.numericDeck = shuffle(Object.keys(familyNames));
     mode = app.numericDeck.pop();
   }
-  const generators = {
-    ohm: ohmQuestion,
-    charge: chargeQuestion,
-    power: powerQuestion,
-    pouillet: pouilletQuestion,
-    section: sectionQuestion,
-    series: seriesQuestion,
-    parallel: parallelQuestion,
-    mixed: mixedCircuitQuestion,
-    formulas: equationQuestion,
-  };
-  const question = generators[mode]();
-  question.precision = mode === "pouillet" ? 6 : 4;
+  const question =
+    mode === "formulas" ? equationQuestion() : schoolQuestion(mode);
+  question.precision ??= mode === "pouillet" ? 6 : 4;
   app.current = question;
   updateScore();
   const equation = question.kind === "equation";
   $("#numericAnswer").hidden = equation;
   $("#equationAnswer").hidden = !equation;
-  $("#unitContext").hidden = !equation && question.kind !== "cascade";
+  $("#unitContext").hidden = !question.unitContext;
   $("#unitContext").textContent = question.unitContext || "";
   $("#topic").textContent = question.topic;
   $("#formula").textContent = question.formula;
@@ -1107,6 +1168,8 @@ function renderCascade() {
   $("#cascadeCounter").textContent = done
     ? "Étapes terminées"
     : `Étape ${app.stepIndex + 1} / ${question.steps.length}`;
+  $("#cascadeHint").textContent =
+    `Un seul énoncé. Reprenez les valeurs corrigées aux étapes qui en dépendent, arrondies à ${question.precision} décimales. Les points sont répartis entre les étapes.`;
   $("#cascadeSteps").replaceChildren(
     ...question.steps.map((step, index) => {
       const item = document.createElement("li"),
@@ -1124,7 +1187,7 @@ function renderCascade() {
       content.append(title);
       const description = document.createElement("p");
       description.textContent = step.description;
-      content.append(description);
+      if (step.description) content.append(description);
       if (result) {
         const status = document.createElement("p");
         status.className = "step-result " + (result.correct ? "ok" : "no");
@@ -1134,7 +1197,7 @@ function renderCascade() {
         calculation.textContent = step.calc;
         const reuse = document.createElement("p");
         reuse.className = "step-reuse";
-        reuse.textContent = `Valeur ${index === question.steps.length - 1 ? "finale" : "reprise pour la suite"} : ${step.target} = ${fmt(step.answer)} Ω.`;
+        reuse.textContent = `Valeur corrigée : ${step.target} = ${schoolFormat(step.answer)} ${step.unit}.`;
         content.append(status, calculation, reuse);
       }
       item.append(number, content);
@@ -1151,15 +1214,18 @@ function renderCascade() {
       step.dependsOn
         .map(
           (index) =>
-            `${question.steps[index].target} = ${fmt(question.steps[index].answer)} Ω`,
+            `${question.steps[index].target} = ${schoolFormat(question.steps[index].answer)} ${question.steps[index].unit}`,
         )
         .join(" ; ") +
       ".";
     $("#numericInput").value = "";
+    $("#numericUnit").textContent = step.unit;
+    $("#numericHint").textContent =
+      `Virgule ou point accepté. Arrondissez à ${step.precision ?? question.precision} décimales si nécessaire.`;
     $("#formula").textContent = step.formula;
     $("#validateBtn").textContent =
       app.stepIndex === question.steps.length - 1
-        ? "Valider Req →"
+        ? `Valider ${step.target} →`
         : "Valider cette étape →";
   }
 }
@@ -1178,23 +1244,25 @@ function submitCascadeStep() {
   }
   const correct = isNumericCorrect(value, {
     answer: step.answer,
-    precision: 4,
+    precision: step.precision ?? question.precision,
   });
   const raw = $("#numericInput").value.trim();
   const response =
-    raw + (/[a-zΩ²]/i.test(raw.replace(/e[+-]?\d+/gi, "")) ? "" : " Ω");
+    raw +
+    (/[a-zΩ²%]/i.test(raw.replace(/e[+-]?\d+/gi, "")) ? "" : " " + step.unit);
   app.stepResponses.push({
     target: step.target,
     response,
     correct,
     correction: step.calc,
     reusedValue: step.answer,
+    unit: step.unit,
   });
   app.stepIndex++;
   renderCascade();
   if (app.stepIndex < question.steps.length) {
     $("#cascadeStatus").textContent =
-      `Étape ${app.stepIndex} ${correct ? "correcte" : "incorrecte"}. Pour la suite, ${step.target} = ${fmt(step.answer)} Ω. Passez à l’étape ${app.stepIndex + 1}.`;
+      `Étape ${app.stepIndex} ${correct ? "correcte" : "incorrecte"}. Valeur corrigée : ${step.target} = ${schoolFormat(step.answer)} ${step.unit}. Passez à l’étape ${app.stepIndex + 1}.`;
     $("#numericInput").focus();
     return;
   }
@@ -1409,6 +1477,7 @@ function restart() {
     history: [],
     equationDeck: [],
     numericDeck: [],
+    exerciseDecks: {},
     current: null,
   });
   $("#quizTitle").textContent = themeLabel();
@@ -1521,7 +1590,12 @@ if (document.modelContext?.registerTool) {
             given: app.current.given,
             kind: app.current.kind || "numeric",
             target: app.current.target || null,
-            unit: app.current.kind === "equation" ? null : app.current.unit,
+            unit:
+              app.current.kind === "equation"
+                ? null
+                : app.current.kind === "cascade"
+                  ? app.current.steps[app.stepIndex]?.unit || app.current.unit
+                  : app.current.unit,
             context: app.current.unitContext || null,
             answered: app.answered,
             ...(app.current.kind === "cascade"
@@ -1530,6 +1604,7 @@ if (document.modelContext?.registerTool) {
                     target: step.target,
                     title: step.title,
                     description: step.description,
+                    unit: step.unit,
                   })),
                   stepNumber: app.answered ? null : app.stepIndex + 1,
                   completedSteps: app.stepResponses.map((result) => ({
@@ -1540,7 +1615,7 @@ if (document.modelContext?.registerTool) {
                       (index) => ({
                         target: app.current.steps[index].target,
                         value: app.current.steps[index].answer,
-                        unit: "Ω",
+                        unit: app.current.steps[index].unit,
                       }),
                     ) || [],
                 }

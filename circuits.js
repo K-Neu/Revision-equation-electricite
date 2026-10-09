@@ -346,6 +346,24 @@ function renderCircuitDiagram(tree) {
         left += size.width;
         if (index < node.children.length - 1) {
           line(left, middle, left + 36, middle);
+          if (node.junctionLabels?.[index]) {
+            make("circle", {
+              cx: left + 18,
+              cy: middle,
+              r: 2.5,
+              fill: "currentColor",
+            });
+            make(
+              "text",
+              {
+                x: left + 18,
+                y: middle - 12,
+                "text-anchor": "middle",
+                class: "circuit-label",
+              },
+              node.junctionLabels[index],
+            );
+          }
           left += 36;
         }
       });
@@ -382,7 +400,7 @@ function renderCircuitDiagram(tree) {
   svg.setAttribute("role", "img");
   svg.setAttribute(
     "aria-label",
-    "Circuit entre les bornes A et B. La résistance marquée d’un point d’interrogation est à déterminer.",
+    "Circuit entre les bornes A et B. Les valeurs et les associations sont également décrites dans l’énoncé. Un point d’interrogation indique une résistance à déterminer.",
   );
   draw(tree, 44, 24);
   line(18, middle, 44, middle);
