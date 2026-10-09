@@ -175,7 +175,10 @@
           <div class="page-heading">
             <p class="eyebrow">VOTRE PROCHAINE SÉRIE</p>
             <h1 id="setupTitle" tabindex="-1">À vous de choisir.</h1>
-            <p>Le bon format, le bon thème. Dix questions pour progresser.</p>
+            <p>
+              Des problèmes comme au cours : appareils, conducteurs et circuits.
+              Dix exercices pour progresser.
+            </p>
           </div>
           <div class="setup-layout">
             <div class="setup-options">
@@ -192,8 +195,8 @@
                     ><span class="format-symbol" aria-hidden="true">123</span
                     ><strong>Calculs appliqués</strong
                     ><span
-                      >Calculez une valeur à partir des données et saisissez
-                      votre résultat.</span
+                      >Résolvez des énoncés concrets, avec conversions et étapes
+                      de calcul, puis saisissez vos résultats.</span
                     ></label
                   >
                   <label class="format-card"
@@ -243,7 +246,7 @@
                       >Q</span
                     ><span
                       ><strong>Charge électrique</strong
-                      ><small>Charge, courant et durée</small></span
+                      ><small>Coulombs, Ah et autonomie</small></span
                     ><span class="choice-check" aria-hidden="true"></span
                   ></label>
                   <label class="theme-card"
@@ -266,7 +269,7 @@
                       >ρ</span
                     ><span
                       ><strong>Loi de Pouillet</strong
-                      ><small>Résistivité et conducteurs</small></span
+                      ><small>Bobines, fils et shunts</small></span
                     ><span class="choice-check" aria-hidden="true"></span
                   ></label>
                   <label class="theme-card"
@@ -289,7 +292,9 @@
                       >Rₜ</span
                     ><span
                       ><strong>Résistances en série</strong
-                      ><small>Résistance totale et inconnues</small></span
+                      ><small
+                        >Lampes, tensions et résistances à ajouter</small
+                      ></span
                     ><span class="choice-check" aria-hidden="true"></span
                   ></label>
                   <label class="theme-card"
@@ -302,7 +307,7 @@
                       >∥</span
                     ><span
                       ><strong>Résistances en parallèle</strong
-                      ><small>Équivalente et résistances inconnues</small></span
+                      ><small>Courants de branche et shunts</small></span
                     ><span class="choice-check" aria-hidden="true"></span
                   ></label>
                   <label class="theme-card"
@@ -312,7 +317,22 @@
                       >Req</span
                     ><span
                       ><strong>Circuits mixtes</strong
-                      ><small>Associations série et parallèle</small></span
+                      ><small>Schémas et calculs en cascade</small></span
+                    ><span class="choice-check" aria-hidden="true"></span
+                  ></label>
+                  <label class="theme-card"
+                    ><input
+                      type="radio"
+                      name="quizTheme"
+                      value="voltageDrop" /><span
+                      class="theme-symbol"
+                      aria-hidden="true"
+                      >ΔU</span
+                    ><span
+                      ><strong>Chute de tension</strong
+                      ><small
+                        >Lignes bifilaires et section des fils</small
+                      ></span
                     ><span class="choice-check" aria-hidden="true"></span
                   ></label>
                 </div>
@@ -417,8 +437,8 @@
                     id="diagramScroll"
                   ></div>
                   <p class="field-hint">
-                    La résistance marquée « ? » est à retrouver à partir des
-                    données.
+                    Les associations et les mesures sont décrites dans l’énoncé.
+                    Une valeur « ? » est à déterminer.
                     <span class="diagram-mobile-hint"
                       >Faites glisser le schéma horizontalement pour voir tout
                       le circuit.</span
@@ -432,11 +452,7 @@
                     <span class="eyebrow">RÉSOLUTION EN CASCADE</span
                     ><span id="cascadeCounter"></span>
                   </div>
-                  <p class="field-hint">
-                    Une seule question. Chaque résultat corrigé est repris à
-                    l’étape suivante, arrondi à 4 décimales. Les points sont
-                    répartis entre les étapes.
-                  </p>
+                  <p class="field-hint" id="cascadeHint"></p>
                   <ol id="cascadeSteps" class="cascade-steps"></ol>
                   <p
                     id="cascadeStatus"
@@ -632,6 +648,7 @@
     <script src="pdf-fonts.js"></script>
     <script src="pdf-report.js"></script>
     <script src="circuits.js"></script>
+    <script src="school-exercises.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

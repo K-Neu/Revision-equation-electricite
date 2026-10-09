@@ -131,6 +131,21 @@ async function submitNumeric(page, value) {
   await page.locator("#numericInput").fill(value);
   await page.locator("#numericInput").press("Enter");
 }
+// UI/scoring checks; independent physical calculations are in school-math.spec.cjs.
+async function answerCurrentQuestion(page) {
+  const q = await page.evaluate(() => app.current);
+  const steps = q.kind === "cascade" ? q.steps : [q];
+  for (const step of steps) {
+    assert.equal(await page.locator("#numericUnit").textContent(), step.unit);
+    await submitNumeric(
+      page,
+      step.answer.toFixed(step.precision ?? q.precision).replace(".", ",") +
+        " " +
+        step.unit,
+    );
+  }
+  return steps.length;
+}
 async function calculateMixedSteps(page) {
   const data = await page.evaluate(() => ({
     variant: app.current.variant,
@@ -201,7 +216,7 @@ let base, browser;
   await page.locator(".hero-cta").click();
   assert.equal(await page.locator("#setupScreen").isVisible(), true);
   assert.equal(await page.locator("#setupHelpToggle").isChecked(), false);
-  assert.equal(await page.locator('input[name="quizTheme"]').count(), 9);
+  assert.equal(await page.locator('input[name="quizTheme"]').count(), 10);
   pass("Home, questionnaire menu and aids disabled by default");
 
   for (const theme of [
@@ -212,12 +227,12 @@ let base, browser;
     "section",
     "series",
     "parallel",
+    "voltageDrop",
   ]) {
     await start(page, "numeric", theme);
     for (let index = 0; index < 10; index++) {
-      const answer = await calculateDisplayedQuestion(page, theme),
-        precision = theme === "pouillet" ? 6 : 4;
-      await submitNumeric(page, answer.toFixed(precision).replace(".", ","));
+      const answer = await page.evaluate(() => app.current.answer);
+      await answerCurrentQuestion(page);
       assert.equal(
         await page.evaluate(() => app.answered),
         true,
@@ -234,10 +249,14 @@ let base, browser;
     assert.equal(await page.locator("#finalScore").textContent(), "10 / 10");
   }
   pass(
-    "All seven single-result calculation themes: displayed values, rounding, Enter and 10/10 scores",
+    "School exercise series: per-step units, rounding, Enter and 10/10 scores",
   );
 
   await start(page, "numeric", "ohm");
+  await page.evaluate(() => {
+    app.exerciseDecks.ohm = ["lamp"];
+    newQuestion();
+  });
   for (const invalid of [
     "",
     "abc",
@@ -258,6 +277,10 @@ let base, browser;
   await page.evaluate(() => submitAnswer());
   assert.equal(await page.evaluate(() => app.history.length), 1);
   await page.locator("#nextBtn").click();
+  await page.evaluate(() => {
+    app.exerciseDecks.ohm = ["heater"];
+    newQuestion();
+  });
   const value = await calculateDisplayedQuestion(page, "ohm"),
     unit = await page.locator("#numericUnit").textContent();
   await submitNumeric(page, value + " wrong-unit");
@@ -283,10 +306,7 @@ let base, browser;
   await start(page, "numeric", "series", true);
   await page.locator("#helpToggle").uncheck();
   for (let index = 0; index < 10; index++) {
-    await submitNumeric(
-      page,
-      String(await calculateDisplayedQuestion(page, "series")),
-    );
+    await answerCurrentQuestion(page);
     await page.locator("#nextBtn").click();
   }
   assert.equal(await page.locator("#finalScore").textContent(), "5 / 10");
@@ -388,6 +408,7 @@ let base, browser;
     "series",
     "parallel",
     "mixed",
+    "voltageDrop",
   ]) {
     await start(page, "equation", theme);
     for (let index = 0; index < 10; index++) {
@@ -407,6 +428,7 @@ let base, browser;
           series: "Résistances en série",
           parallel: "Résistances en parallèle",
           mixed: "Circuits mixtes",
+          voltageDrop: "Chute de tension",
         }[theme],
       );
       await page.locator("#equationInput").fill(ascii(question.answer));
@@ -420,7 +442,7 @@ let base, browser;
     assert.equal(await page.locator("#finalScore").textContent(), "10 / 10");
   }
   pass(
-    "All eight equation themes, full equations, manual units and 10/10 scores",
+    "All nine equation themes, full equations, manual units and 10/10 scores",
   );
 
   const downloadPromise = page.waitForEvent("download");
@@ -449,21 +471,8 @@ let base, browser;
   ]) {
     await start(page, "numeric", "mixed");
     await page.evaluate((variant) => {
-      const original = Math.random;
-      Math.random = () =>
-        [
-          "parallel-series",
-          "series-parallel",
-          "series-parallel-series",
-          "parallel-series-parallel",
-        ].indexOf(variant) /
-          4 +
-        0.01;
-      try {
-        newQuestion();
-      } finally {
-        Math.random = original;
-      }
+      app.exerciseDecks.mixed = [variant];
+      newQuestion();
     }, variant);
     assert.equal(await page.evaluate(() => app.current.variant), variant);
     assert.equal(await page.locator("#circuitDiagram svg").count(), 1);
@@ -547,9 +556,7 @@ let base, browser;
   await start(page, "numeric", "mixed");
   let expectedSteps = 0;
   for (let index = 0; index < 10; index++) {
-    const values = await calculateMixedSteps(page);
-    expectedSteps += values.length;
-    for (const value of values) await submitNumeric(page, String(value));
+    expectedSteps += await answerCurrentQuestion(page);
     assert.equal(await page.evaluate(() => app.score), index + 1);
     await page.locator("#nextBtn").click();
   }
@@ -563,8 +570,8 @@ let base, browser;
   assert.ok(
     circuitReport.answers.every(
       (answer) =>
-        answer.context.includes("Entre A") ||
-        answer.context.includes("entre A"),
+        answer.question.includes("Entre A") ||
+        answer.question.includes("entre A"),
     ),
   );
   assert.ok(
@@ -582,6 +589,71 @@ let base, browser;
   );
   pass(
     "Complete ten-circuit series, all cascading responses/corrections in report and downloadable PDF",
+  );
+
+  const models = await page.evaluate(() => Object.entries(schoolVariants));
+  let modelCount = 0;
+  for (const [theme, variants] of models) {
+    await start(page, "numeric", theme);
+    for (const variant of variants) {
+      await page.evaluate(
+        ({ theme, variant }) => {
+          app.exerciseDecks[theme] = [variant];
+          newQuestion();
+        },
+        { theme, variant },
+      );
+      const q = await page.evaluate(() => app.current);
+      await page.setViewportSize({ width: 360, height: 844 });
+      assert.equal(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        true,
+        `${theme}/${variant} mobile overflow`,
+      );
+      if (q.kind === "cascade") {
+        for (let stepIndex = 0; stepIndex < q.steps.length; stepIndex++) {
+          const step = q.steps[stepIndex];
+          assert.equal(
+            await page.locator("#numericUnit").textContent(),
+            step.unit,
+          );
+          await submitNumeric(page, "invalid");
+          assert.equal(await page.evaluate(() => app.stepIndex), stepIndex);
+          await submitNumeric(
+            page,
+            stepIndex === 0
+              ? String(step.answer + 100)
+              : String(step.answer) + " " + step.unit,
+          );
+          assert.equal(await page.evaluate(() => app.stepIndex), stepIndex + 1);
+          if (stepIndex < q.steps.length - 1)
+            assert.equal(await page.evaluate(() => app.answered), false);
+        }
+        const history = await page.evaluate(() => app.history.at(-1));
+        assert.equal(history.steps[0].correct, false);
+        assert.ok(
+          history.steps.slice(1).every((step) => step.correct),
+          `${theme}/${variant}: corrected reuse`,
+        );
+        assert.ok(
+          Math.abs(history.earned - (q.steps.length - 1) / q.steps.length) <
+            1e-9,
+        );
+        assert.ok(
+          history.steps.every(
+            (step, index) => step.unit === q.steps[index].unit,
+          ),
+        );
+      } else await answerCurrentQuestion(page);
+      assert.equal(await page.evaluate(() => app.answered), true);
+      modelCount++;
+    }
+  }
+  assert.equal(modelCount, 56);
+  pass(
+    "All 56 school models: 360px layout, changing units, invalid inputs, corrected reuse, partial credit and report units",
   );
 
   for (const width of [360, 390, 768, 1440]) {
@@ -625,12 +697,13 @@ let base, browser;
   });
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
   const cached = await page.evaluate(async () => {
-    const cache = await caches.open("atelier-electricite-v11");
+    const cache = await caches.open("atelier-electricite-v12");
     return (await cache.keys()).map((request) => new URL(request.url).pathname);
   });
   for (const asset of [
     "app.js",
     "circuits.js",
+    "school-exercises.js",
     "styles.css",
     "pdf-fonts.js",
     "pdf-report.js",
@@ -650,8 +723,7 @@ let base, browser;
     await page.locator("#unitInput").fill(q.unit);
     await page.locator("#validateBtn").click();
   } else if (await page.evaluate(() => app.current.kind === "cascade")) {
-    for (const value of await calculateMixedSteps(page))
-      await submitNumeric(page, String(value));
+    await answerCurrentQuestion(page);
   } else
     await submitNumeric(
       page,
